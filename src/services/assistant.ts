@@ -104,7 +104,7 @@ export function formatDuration(milliseconds: number): string {
   return String(minutes).padStart(2, '0') + ':' + String(remainingSeconds).padStart(2, '0');
 }
 
-export async function askConfiguredAssistant(endpoint: string, message: string): Promise<string> {
+export async function askConfiguredAssistant(endpoint: string, message: string, history: AssistantMessage[] = [], token = ''): Promise<string> {
   const cleanEndpoint = endpoint.trim();
   if (!cleanEndpoint) {
     throw new Error('Для свободных ответов подключи AI backend в настройках. Локально я уже умею ставить таймеры, сохранять заметки и открывать доступные приложения.');
@@ -123,14 +123,22 @@ export async function askConfiguredAssistant(endpoint: string, message: string):
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 25_000);
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token.trim()) headers.Authorization = 'Bearer ' + token.trim();
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      headers,
+      body: JSON.stringify({
+        message,
+        history: history.filter((item) => item.role === 'user' || item.role === 'assistant').slice(-10).map((item) => ({ role: item.role, content: item.text })),
+      }),
       signal: controller.signal,
     });
-    if (!response.ok) throw new Error('AI backend ответил с ошибкой ' + response.status + '.');
-    const data: unknown = await response.json();
+    const data: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      if (typeof data === 'object' && data !== null && 'error' in data && typeof data.error === 'string') throw new Error(data.error);
+      throw new Error('AI backend ответил с ошибкой ' + response.status + '.');
+    }
     if (typeof data === 'object' && data !== null && 'reply' in data && typeof data.reply === 'string') {
       return data.reply;
     }

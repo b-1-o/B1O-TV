@@ -23,6 +23,7 @@ export interface TVSettings {
   reduceMotion: boolean;
   glassIntensity: number;
   aiEndpoint: string;
+  aiToken: string;
   jellyfinUrl: string;
   selfMusicUrl: string;
   speakReplies: boolean;

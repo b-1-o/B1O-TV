@@ -355,11 +355,16 @@ function App() {
 
   const startVoiceAssistant = () => {
     if (assistantCloseTimer.current !== undefined) window.clearTimeout(assistantCloseTimer.current);
-    setAssistantOpen(false);
-    setAssistantClosing(false);
+    const closeDelay = assistantOpen ? 300 : 160;
+    if (assistantOpen) {
+      closeAssistant();
+    } else {
+      setAssistantOpen(false);
+      setAssistantClosing(false);
+    }
     setAssistantActivityText('');
     if (assistantActivityTimer.current !== undefined) window.clearTimeout(assistantActivityTimer.current);
-    window.setTimeout(() => voiceStartRef.current(), 160);
+    window.setTimeout(() => voiceStartRef.current(), closeDelay);
   };
 
   const showAssistantActivity = (message: string) => {

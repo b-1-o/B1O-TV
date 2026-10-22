@@ -50,7 +50,7 @@ npm run test
 
 ## Samsung Tizen
 
-В `public/config.xml` хранится начальный шаблон манифеста. Перед созданием WGT его нужно перенести/адаптировать под проект Samsung TV в Tizen Studio и подписать сертификатом из Certificate Manager. Конкретные API и разрешения проверяются на версии Tizen телевизора. См. [docs/TV-SETUP.md](docs/TV-SETUP.md).
+В `public/config.xml` хранится манифест Samsung TV. Для пошаговой установки на реальный телевизор, создания сертификата, Developer Mode, подключения Device Manager, сборки `.wgt` и импорта настроек с ПК см. [полную инструкцию на русском](docs/INSTALL-RU.md) и [технические заметки по TV](docs/TV-SETUP.md). CI публикует готовую production web-сборку как артефакт `B1O-TV-TV-Project`; в ней генерируется PNG-значок на основе `assets/logo.jpg`. Архив — не подписанный `.wgt`: установочный пакет нужно подписать собственным Samsung TV certificate profile в Tizen Studio.
 
 ### Важные ограничения, не скрытые в интерфейсе
 

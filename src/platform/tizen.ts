@@ -32,7 +32,10 @@ interface TizenApplicationManager {
 
 declare global {
   interface Window {
-    tizen?: { application?: TizenApplicationManager };
+    tizen?: {
+      application?: TizenApplicationManager;
+      tvinputdevice?: TizenInputDeviceManager;
+    };
   }
 }
 

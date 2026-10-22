@@ -300,7 +300,7 @@ function App() {
     const text = (rawText ?? draft).trim();
     if (!text || assistantBusy) return;
     setDraft('');
-    setMessages((previous) => [...previous, createAssistantMessage('user', text)]);
+    setMessages((previous) => [...previous, createAssistantMessage('user', text)].slice(-60));
     setAssistantBusy(true);
 
     let reply = '';
@@ -334,7 +334,7 @@ function App() {
       reply = error instanceof Error ? error.message : 'Не получилось выполнить команду. Попробуй ещё раз.';
     }
 
-    setMessages((previous) => [...previous, createAssistantMessage('assistant', reply)]);
+    setMessages((previous) => [...previous, createAssistantMessage('assistant', reply)].slice(-60));
     setAssistantBusy(false);
     if (settings.speakReplies && 'speechSynthesis' in window) {
       try {
@@ -514,7 +514,7 @@ function App() {
           <section className="page-section">
             <div className="page-title-row"><div><span className="eyebrow small">ТВОЯ БИБЛИОТЕКА</span><h1>Приложения</h1><p>Избранное и приложения, которые обнаружил телевизор.</p></div><label className="search-box glass-panel"><Search size={18} /><input data-tv-focus="true" aria-label="Поиск приложений" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти приложение…" /></label></div>
             <div className="catalog-group"><h2>Избранные сервисы <span>0{filteredApps.featured.length}</span></h2><div className="app-catalog-grid">{filteredApps.featured.map((app) => <button className={'catalog-card glass-panel card-' + app.id} data-tv-focus="true" key={app.id} onClick={() => void runApp(app.target)}><AppSymbol app={app} /><strong>{app.name}</strong><span>{app.subtitle}</span><div className="catalog-card-footer">{app.category}<ArrowRight size={16} /></div></button>)}</div></div>
-            <div className="catalog-group"><h2>Установлено на телевизоре <span>{installedApps.length}</span></h2>{installedApps.length ? <div className="installed-list">{filteredApps.discovered.map((app) => <button className="installed-row glass-panel" data-tv-focus="true" key={app.id} onClick={() => void launchInstalledAppById(app.id, installedApps).then((result) => notify(result.message))><span className="installed-icon"><Grid2X2 /></span><span><strong>{app.name}</strong><small>{app.id}{app.version ? ' · v' + app.version : ''}</small></span><ArrowRight size={17} /></button>)}</div> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'Список приложений недоступен' : 'Список появится на телевизоре'}</strong><span>В браузере работает предпросмотр. На Samsung список загружается через Tizen Web API и его разрешения.</span></div>}</div>
+            <div className="catalog-group"><h2>Установлено на телевизоре <span>{installedApps.length}</span></h2>{installedApps.length ? <div className="installed-list">{filteredApps.discovered.map((app) => <button className="installed-row glass-panel" data-tv-focus="true" key={app.id} onClick={() => void launchInstalledAppById(app.id, installedApps).then((result) => notify(result.message))}><span className="installed-icon"><Grid2X2 /></span><span><strong>{app.name}</strong><small>{app.id}{app.version ? ' · v' + app.version : ''}</small></span><ArrowRight size={17} /></button>)}</div> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'Список приложений недоступен' : 'Список появится на телевизоре'}</strong><span>В браузере работает предпросмотр. На Samsung список загружается через Tizen Web API и его разрешения.</span></div>}</div>
           </section>
         )}
 

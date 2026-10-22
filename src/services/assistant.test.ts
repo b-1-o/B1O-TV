@@ -56,6 +56,6 @@ describe('resolveAssistantEndpoint', () => {
   });
 
   it('rejects insecure non-local endpoints', () => {
-    expect(() => resolveAssistantEndpoint('http://example.com')).toThrow('Для AI backend используй HTTPS.');
+    expect(() => resolveAssistantEndpoint('http://example.com')).toThrow('Use HTTPS for the AI backend.');
   });
 });

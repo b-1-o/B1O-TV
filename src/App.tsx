@@ -349,14 +349,76 @@ function App() {
   };
 
   const openAssistant = () => {
+    setAssistantClosing(false);
     setAssistantOpen(true);
     window.setTimeout(() => document.querySelector<HTMLInputElement>('[data-assistant-input]')?.focus(), 60);
+  };
+
+  const startVoiceAssistant = () => {
+    if (assistantCloseTimer.current !== undefined) window.clearTimeout(assistantCloseTimer.current);
+    setAssistantOpen(false);
+    setAssistantClosing(false);
+    setAssistantActivityText('');
+    if (assistantActivityTimer.current !== undefined) window.clearTimeout(assistantActivityTimer.current);
+    window.setTimeout(() => voiceStartRef.current(), 160);
+  };
+
+  const showAssistantActivity = (message: string) => {
+    setAssistantActivityText(message);
+    if (assistantActivityTimer.current !== undefined) window.clearTimeout(assistantActivityTimer.current);
+    assistantActivityTimer.current = window.setTimeout(() => setAssistantActivityText(''), 5_500);
+  };
+
+  const exportTVSetup = () => {
+    const payload = {
+      format: 'b1o-tv-setup',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      settings,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'b1o-tv-setup.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    notify('TV setup exported. Keep this file private: it contains your device token.');
+  };
+
+  const importTVSetup = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const raw: unknown = JSON.parse(String(reader.result ?? ''));
+        if (typeof raw !== 'object' || raw === null) throw new Error('Invalid setup file.');
+        const payload = raw as { format?: unknown; settings?: unknown };
+        if (payload.format !== 'b1o-tv-setup' || typeof payload.settings !== 'object' || payload.settings === null) {
+          throw new Error('This is not a valid B1O TV setup file.');
+        }
+        const imported = { ...DEFAULT_SETTINGS, ...(payload.settings as Partial<TVSettings>) };
+        if (!WALLPAPERS.some((wallpaper) => wallpaper.id === imported.wallpaper)) imported.wallpaper = DEFAULT_SETTINGS.wallpaper;
+        if (imported.temperatureUnit !== 'C' && imported.temperatureUnit !== 'F') imported.temperatureUnit = 'F';
+        if (typeof imported.aiEndpoint !== 'string' || !imported.aiEndpoint.trim()) imported.aiEndpoint = DEFAULT_SETTINGS.aiEndpoint;
+        setSettings(imported);
+        notify('TV setup imported successfully.');
+      } catch (error) {
+        notify(error instanceof Error ? error.message : 'Could not read the setup file.');
+      } finally {
+        if (setupImportRef.current) setupImportRef.current.value = '';
+      }
+    };
+    reader.onerror = () => notify('Could not read the setup file.');
+    reader.readAsText(file);
   };
 
   const runApp = async (target: AppTarget): Promise<{ ok: boolean; message: string }> => {
     if (target === 'assistant') {
       openAssistant();
-      return { ok: true, message: 'Ассистент открыт.' };
+      return { ok: true, message: 'Assistant opened.' };
     }
 
     if (target === 'selfmusic') {
@@ -407,11 +469,12 @@ function App() {
         reply = await askConfiguredAssistant(settings.aiEndpoint, text, messages.slice(-10), settings.aiToken);
       }
     } catch (error) {
-      reply = error instanceof Error ? error.message : 'Не получилось выполнить команду. Попробуй ещё раз.';
+      reply = error instanceof Error ? error.message : 'Could not complete that request. Please try again.';
     }
 
     setMessages((previous) => [...previous, createAssistantMessage('assistant', reply)].slice(-60));
     setAssistantBusy(false);
+    showAssistantActivity(reply.length > 62 ? reply.slice(0, 59).trimEnd() + '…' : reply);
     if (settings.speakReplies && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
@@ -441,7 +504,8 @@ function App() {
     };
     const Constructor = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
     if (!Constructor) {
-      notify('Голосовой ввод браузером не поддерживается. Проверь TV Voice Control API на устройстве.');
+      showAssistantActivity('Voice input is not supported here');
+      notify('Voice input is not supported in this browser. On TV, check microphone permissions and firmware support.');
       return;
     }
     try {
@@ -450,18 +514,25 @@ function App() {
       recognition.interimResults = false;
       recognition.onresult = (event) => {
         const transcript = event.results?.[0]?.[0]?.transcript?.trim();
-        if (transcript) void submitAssistant(transcript);
+        if (transcript) {
+          setAssistantActivityText('Thinking…');
+          void submitAssistant(transcript);
+        }
       };
       recognition.onerror = () => {
         setVoiceListening(false);
-        notify('Микрофон недоступен или речь не распознана.');
+        showAssistantActivity('Microphone unavailable');
+        notify('Microphone unavailable or speech could not be recognized.');
       };
       recognition.onend = () => setVoiceListening(false);
+      setAssistantActivityText('');
+      if (assistantActivityTimer.current !== undefined) window.clearTimeout(assistantActivityTimer.current);
       setVoiceListening(true);
       recognition.start();
     } catch {
       setVoiceListening(false);
-      notify('Не удалось запустить распознавание речи в этой среде.');
+      showAssistantActivity('Microphone unavailable');
+      notify('Could not start speech recognition in this environment.');
     }
   };
 

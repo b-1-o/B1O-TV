@@ -550,10 +550,31 @@ function App() {
     return readSavedNotes();
   }, [notesVersion]);
 
+  const shouldShowIsland = !assistantOpen && (
+    voiceListening || assistantBusy || Boolean(assistantActivityText) || Boolean(timer) || musicActivity
+  );
+
+  useEffect(() => {
+    if (shouldShowIsland) {
+      setIslandMounted(true);
+      setIslandClosing(false);
+      return;
+    }
+    if (!islandMounted) return;
+    setIslandClosing(true);
+    islandExitTimer.current = window.setTimeout(() => {
+      setIslandMounted(false);
+      setIslandClosing(false);
+    }, 220);
+    return () => {
+      if (islandExitTimer.current !== undefined) window.clearTimeout(islandExitTimer.current);
+    };
+  }, [shouldShowIsland, islandMounted]);
+
   const shellClass = 'app-shell' + (settings.reduceMotion ? ' reduce-motion' : '') + (view === 'home' && compactHome ? ' catalog-mode' : '');
   const activeWallpaper = WALLPAPERS.find((wallpaper) => wallpaper.id === settings.wallpaper) ?? WALLPAPERS[0];
-  const displayedClock = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(now);
-  const displayedDate = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+  const displayedClock = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' }).format(now);
+  const displayedDate = new Intl.DateTimeFormat('en-US', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
 
   return (
     <div className={shellClass} style={{
@@ -561,34 +582,34 @@ function App() {
       '--wallpaper-image': `url("${activeWallpaper.src}")`,
       '--wallpaper-position': activeWallpaper.position,
     } as CSSProperties}>
-      {!assistantOpen && (timer || musicActivity) && (
-      <div className={'dynamic-island' + (assistantOpen ? ' island-ai-active' : timer ? ' island-timer-active' : ' island-music-active')} role="status" aria-live="polite">
-        {assistantOpen ? (
-          <div className="island-main">
-            <span className="island-orb"><Sparkles size={17} /></span>
-            <span className="island-copy"><strong>B1O Assistant</strong><small>{voiceListening ? 'Слушаю тебя…' : assistantBusy ? 'Думаю над ответом…' : 'Готов к диалогу'}</small></span>
-            {voiceListening && <span className="island-wave" aria-hidden="true"><i /><i /><i /><i /></span>}
-          </div>
+      {islandMounted && (shouldShowIsland || islandClosing) && (
+      <div className={'dynamic-island' + (voiceListening || assistantBusy || assistantActivityText ? ' island-ai-active' : timer ? ' island-timer-active' : ' island-music-active') + (islandClosing ? ' island-closing' : '')} role="status" aria-live="polite">
+        {voiceListening || assistantBusy || assistantActivityText ? (
+          <button className="island-main island-assistant-main" data-tv-focus="true" onClick={openAssistant} aria-label="Open assistant conversation">
+            <span className="island-orb assistant-orb"><Sparkles size={18} /></span>
+            <span className="island-copy"><strong>Assistant</strong><small>{voiceListening ? 'Listening…' : assistantBusy ? 'Thinking…' : assistantActivityText}</small></span>
+            {voiceListening ? <span className="island-wave" aria-hidden="true"><i /><i /><i /><i /></span> : <Sparkles className="island-status-icon" size={18} />}
+          </button>
         ) : timer ? (
-          <div className="island-main">
-            <span className="island-orb timer-orb"><Timer size={17} /></span>
-            <span className="island-copy"><strong>Таймер</strong><small>{timer.label}</small></span>
+          <button className="island-main island-timer-main" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Cancel timer">
+            <span className="island-orb timer-orb"><Timer size={18} /></span>
+            <span className="island-copy"><strong>Timer</strong><small>{timer.label}</small></span>
             <span className="island-countdown">{formatDuration(remainingMs)}</span>
-          </div>
+          </button>
         ) : (
-          <button className="island-main island-music-main" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic">
-            <span className="island-orb music-orb"><Music2 size={17} /></span>
-            <span className="island-copy"><strong>SelfMusic</strong><small>Активная сессия</small></span>
-            <Play size={15} />
+          <button className="island-main island-music-main" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Return to SelfMusic">
+            <span className="island-orb music-orb"><Music2 size={18} /></span>
+            <span className="island-copy"><strong>SelfMusic</strong><small>Now active</small></span>
+            <Play size={16} />
           </button>
         )}
 
-        {assistantOpen && timer && <span className="island-secondary"><Timer size={14} /><strong>{formatDuration(remainingMs)}</strong></span>}
-        {musicActivity && (assistantOpen || timer) && (
+        {timer && (voiceListening || assistantBusy || assistantActivityText) && <span className="island-secondary"><Timer size={14} /><strong>{formatDuration(remainingMs)}</strong></span>}
+        {musicActivity && (voiceListening || assistantBusy || assistantActivityText || timer) && (
           <button className="island-activity-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic"><Music2 size={15} /></button>
         )}
-        {timer && <button className="island-dismiss" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Отменить таймер"><X size={14} /></button>}
-        {musicActivity && <button className="island-dismiss" data-tv-focus="true" onClick={() => setMusicActivity(false)} aria-label="Скрыть музыкальную активность"><X size={14} /></button>}
+        {timer && (voiceListening || assistantBusy || assistantActivityText) && <button className="island-dismiss" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Cancel timer"><X size={14} /></button>}
+        {musicActivity && (voiceListening || assistantBusy || assistantActivityText || timer) && <button className="island-dismiss" data-tv-focus="true" onClick={() => setMusicActivity(false)} aria-label="Hide music activity"><X size={14} /></button>}
       </div>
       )}
 
@@ -599,7 +620,7 @@ function App() {
         </button>
       </header>
 
-      <main className="main-content">
+      <main className={'main-content' + (viewMotion ? ' transition-' + viewMotion : '')}>
         {view === 'home' && (
           <>
             <div className="home-stage">

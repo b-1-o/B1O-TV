@@ -120,7 +120,8 @@ export function resolveAssistantEndpoint(endpoint: string): URL {
     throw new Error('Для AI backend используй HTTPS.');
   }
 
-  const path = url.pathname.replace(/\\/+$/, '');
+  let path = url.pathname;
+  while (path.endsWith('/')) path = path.slice(0, -1);
   if (!path.endsWith('/api/assistant')) {
     url.pathname = (path || '') + '/api/assistant';
   }

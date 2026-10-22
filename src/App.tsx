@@ -632,7 +632,7 @@ function App() {
                 <aside className="weather-panel" aria-label="Weather">
                   <div className="weather-icon" aria-hidden="true">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>
                   <div className="weather-copy">
-                    <strong>{weatherLoading ? '—' : weather ? Math.round(weather.temperatureF) + '°F' : '—'}</strong>
+                    <strong>{weatherLoading ? '—' : weather ? Math.round(settings.temperatureUnit === 'C' ? (weather.temperatureF - 32) * 5 / 9 : weather.temperatureF) + '°' + settings.temperatureUnit : '—'}</strong>
                     <span>{weather ? describeWeather(weather.code) : weatherError ? 'Weather unavailable' : 'Loading…'}</span>
                     <small>{weather?.city ?? settings.city}</small>
                   </div>

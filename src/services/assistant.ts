@@ -147,7 +147,16 @@ export async function askConfiguredAssistant(endpoint: string, message: string, 
     });
     const data: unknown = await response.json().catch(() => null);
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Токен устройства не совпадает с секретом Cloudflare Worker. Открой Настройки → AI и голос и вставь тот же токен, с которым проходит запрос через curl.');
+      }
+      if (response.status === 503) {
+        throw new Error('AI backend не настроен. Проверь секрет ASSISTANT_TOKEN и публикацию Worker в Cloudflare.');
+      }
       if (typeof data === 'object' && data !== null && 'error' in data && typeof data.error === 'string') throw new Error(data.error);
+      throw new Error('AI backend ответил с ошибкой ' + response.status + '.');
+    }
+    if (typeof data === 'object' && data !== null && 'error' in data && typeof data.error === 'string') throw new Error(data.error);
       throw new Error('AI backend ответил с ошибкой ' + response.status + '.');
     }
     if (typeof data === 'object' && data !== null && 'reply' in data && typeof data.reply === 'string') {

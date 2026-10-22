@@ -1373,3 +1373,71 @@ button:disabled { transform: none; }
     transition-duration: 0s;
   }
 }
+
+
+/* --------------------------------------------------------------------------
+   Tizen rendering fast path.
+   Keep the glass/monochrome design, but avoid live backdrop and blur filters
+   on the TV compositor while arrows move focus between cards.
+   -------------------------------------------------------------------------- */
+.app-shell.tv-runtime .glass-panel,
+.app-shell.tv-runtime .featured-card,
+.app-shell.tv-runtime .catalog-card,
+.app-shell.tv-runtime .installed-row,
+.app-shell.tv-runtime .library-card,
+.app-shell.tv-runtime .settings-card,
+.app-shell.tv-runtime .note-area,
+.app-shell.tv-runtime .empty-state,
+.app-shell.tv-runtime .search-box,
+.app-shell.tv-runtime .notice-card,
+.app-shell.tv-runtime .wallpaper-choice,
+.app-shell.tv-runtime .weather-panel,
+.app-shell.tv-runtime .primary-button,
+.app-shell.tv-runtime .secondary-button,
+.app-shell.tv-runtime .assistant-form,
+.app-shell.tv-runtime .test-voice-button,
+.app-shell.tv-runtime .floating-dock,
+.app-shell.tv-runtime .assistant-overlay,
+.app-shell.tv-runtime .toast-message {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.app-shell.tv-runtime .featured-card::before {
+  content: none !important;
+  filter: none !important;
+}
+
+.app-shell.tv-runtime .weather-icon,
+.app-shell.tv-runtime .dock-assistant svg {
+  filter: none !important;
+}
+
+/* A crisp silver edge is cheaper to redraw than a continuously interpolated
+   multi-layer shadow. Animate only transform; the shadow updates in one frame. */
+.app-shell.tv-runtime button,
+.app-shell.tv-runtime a,
+.app-shell.tv-runtime input,
+.app-shell.tv-runtime select,
+.app-shell.tv-runtime [tabindex] {
+  transition: transform .13s ease-out !important;
+}
+
+.app-shell.tv-runtime [data-tv-focused="true"] {
+  box-shadow:
+    0 0 0 1px rgba(232, 239, 249, .78),
+    0 9px 22px rgba(0, 0, 0, .34);
+}
+
+.app-shell.tv-runtime .featured-card[data-tv-focused="true"],
+.app-shell.tv-runtime .catalog-card[data-tv-focused="true"],
+.app-shell.tv-runtime .installed-row[data-tv-focused="true"],
+.app-shell.tv-runtime .wallpaper-choice[data-tv-focused="true"] {
+  box-shadow:
+    0 0 0 1px rgba(238, 243, 250, .84),
+    0 0 0 3px rgba(210, 223, 241, .08),
+    0 12px 26px rgba(0, 0, 0, .38);
+}
+
+/* Wallpaper thumbnails are loaded only when Settings mounts this seven-item
+   grid; there are no remote poster <img> elements inside the current card lists. */

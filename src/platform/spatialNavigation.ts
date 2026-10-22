@@ -9,7 +9,7 @@ export function initializeSpatialNavigation(): void {
   init({
     debug: false,
     visualDebug: false,
-    throttle: 110,
+    throttle: 55,
     throttleKeypresses: true,
   });
 

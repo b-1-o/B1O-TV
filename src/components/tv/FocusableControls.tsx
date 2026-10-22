@@ -23,11 +23,14 @@ export function TVButton({ focusKey, className, disabled, onClick, ...props }: T
   const generatedId = useId();
   const resolvedFocusKey = focusKey ?? generatedFocusKey('TV-BUTTON-', generatedId);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const handleEnterPress = useCallback(() => {
+    if (!disabled) buttonRef.current?.click();
+  }, [disabled]);
   const { ref, focused } = useFocusable({
     focusKey: resolvedFocusKey,
     focusable: !disabled,
     autoRestoreFocus: true,
-    onEnterPress: () => { if (!disabled) buttonRef.current?.click(); },
+    onEnterPress: handleEnterPress,
   });
   const mergedRef = useCallback((node: HTMLButtonElement | null) => mergeFocusRef(ref, buttonRef, node), [ref]);
 
@@ -51,45 +54,47 @@ export function TVInput({ focusKey, className, disabled, type, ...props }: TVInp
   const generatedId = useId();
   const resolvedFocusKey = focusKey ?? generatedFocusKey('TV-INPUT-', generatedId);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const handleEnterPress = useCallback(() => {
+    const input = inputRef.current;
+    if (!input || disabled) return;
+    if (input.type === 'checkbox' || input.type === 'radio' || input.type === 'file') {
+      input.click();
+      return;
+    }
+    if (input.type === 'range') {
+      input.focus();
+      return;
+    }
+    if (input.dataset.assistantInput !== undefined) {
+      const submitButton = input.form?.querySelector<HTMLButtonElement>('button[type="submit"], button:not([type])');
+      if (submitButton && !submitButton.disabled) submitButton.click();
+      else input.focus();
+      return;
+    }
+    input.focus();
+    input.click();
+  }, [disabled]);
+  const handleArrowPress = useCallback((direction: string) => {
+    const input = inputRef.current;
+    if (!input || input.type !== 'range' || (direction !== 'left' && direction !== 'right')) return true;
+
+    const min = input.min === '' ? 0 : Number(input.min);
+    const max = input.max === '' ? 100 : Number(input.max);
+    const step = input.step === '' || input.step === 'any' ? 1 : Math.max(1e-6, Number(input.step));
+    const current = Number(input.value);
+    const next = Math.max(min, Math.min(max, current + (direction === 'right' ? step : -step)));
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    valueSetter?.call(input, String(next));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return false;
+  }, [disabled]);
   const { ref, focused } = useFocusable({
     focusKey: resolvedFocusKey,
     focusable: !disabled && type !== 'hidden',
     autoRestoreFocus: true,
-    onEnterPress: () => {
-      const input = inputRef.current;
-      if (!input || disabled) return;
-      if (input.type === 'checkbox' || input.type === 'radio' || input.type === 'file') {
-        input.click();
-        return;
-      }
-      if (input.type === 'range') {
-        input.focus();
-        return;
-      }
-      if (input.dataset.assistantInput !== undefined) {
-        const submitButton = input.form?.querySelector<HTMLButtonElement>('button[type="submit"], button:not([type])');
-        if (submitButton && !submitButton.disabled) submitButton.click();
-        else input.focus();
-        return;
-      }
-      input.focus();
-      input.click();
-    },
-    onArrowPress: (direction: string) => {
-      const input = inputRef.current;
-      if (!input || input.type !== 'range' || (direction !== 'left' && direction !== 'right')) return true;
-
-      const min = input.min === '' ? 0 : Number(input.min);
-      const max = input.max === '' ? 100 : Number(input.max);
-      const step = input.step === '' || input.step === 'any' ? 1 : Math.max(1e-6, Number(input.step));
-      const current = Number(input.value);
-      const next = Math.max(min, Math.min(max, current + (direction === 'right' ? step : -step)));
-      const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-      valueSetter?.call(input, String(next));
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      return false;
-    },
+    onEnterPress: handleEnterPress,
+    onArrowPress: handleArrowPress,
   });
   const mergedRef = useCallback((node: HTMLInputElement | null) => mergeFocusRef(ref, inputRef, node), [ref]);
 
@@ -113,15 +118,16 @@ export function TVSelect({ focusKey, className, disabled, ...props }: TVSelectPr
   const generatedId = useId();
   const resolvedFocusKey = focusKey ?? generatedFocusKey('TV-SELECT-', generatedId);
   const selectRef = useRef<HTMLSelectElement | null>(null);
+  const handleEnterPress = useCallback(() => {
+    if (!selectRef.current || disabled) return;
+    selectRef.current.focus();
+    selectRef.current.click();
+  }, [disabled]);
   const { ref, focused } = useFocusable({
     focusKey: resolvedFocusKey,
     focusable: !disabled,
     autoRestoreFocus: true,
-    onEnterPress: () => {
-      if (!selectRef.current || disabled) return;
-      selectRef.current.focus();
-      selectRef.current.click();
-    },
+    onEnterPress: handleEnterPress,
   });
   const mergedRef = useCallback((node: HTMLSelectElement | null) => mergeFocusRef(ref, selectRef, node), [ref]);
 

@@ -1,4 +1,4 @@
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FocusContext, doesFocusableExist, setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import {
   ArrowRight,
@@ -31,8 +31,8 @@ import { createAssistantMessage, askConfiguredAssistant, formatDuration, parseLo
 import { describeWeather, fetchWeather } from './services/weather';
 import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
 import { CardGrid, FocusGroup } from './components/tv/CardGrid';
-import { FocusableCard } from './components/tv/FocusableCard';
 import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
+import { AppSymbol, AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
 
 const LOGO_SRC = new URL('../assets/logo.jpg', import.meta.url).href;
 
@@ -111,15 +111,6 @@ function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
   if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(code)) return <CloudRain />;
   if ([71, 73, 75, 77, 85, 86].includes(code)) return <CloudSnow />;
   return <Cloud />;
-}
-
-function AppSymbol({ app }: { app: TVApp }) {
-  const className = 'app-symbol app-symbol-' + app.id;
-  return (
-    <span className={className} aria-hidden="true">
-      {app.id === 'jellyfin' ? <Film /> : app.id === 'selfmusic' ? <Music2 /> : app.id === 'browser' ? <Grid2X2 /> : <Play />}
-    </span>
-  );
 }
 
 function App() {
@@ -353,11 +344,11 @@ function App() {
     setSettings((previous) => ({ ...previous, [key]: value }));
   };
 
-  const openAssistant = () => {
+  const openAssistant = useCallback(() => {
     setAssistantClosing(false);
     setAssistantOpen(true);
     window.setTimeout(() => document.querySelector<HTMLInputElement>('[data-assistant-input]')?.focus(), 60);
-  };
+  }, []);
 
   const startVoiceAssistant = () => {
     if (assistantCloseTimer.current !== undefined) window.clearTimeout(assistantCloseTimer.current);
@@ -425,7 +416,7 @@ function App() {
     reader.readAsText(file);
   };
 
-  const runApp = async (target: AppTarget): Promise<{ ok: boolean; message: string }> => {
+  const runApp = useCallback(async (target: AppTarget): Promise<{ ok: boolean; message: string }> => {
     if (target === 'assistant') {
       openAssistant();
       return { ok: true, message: 'Assistant opened.' };
@@ -445,7 +436,15 @@ function App() {
     }
     notify(result.message);
     return result;
-  };
+  }, [installedApps, notify, openAssistant, settings.jellyfinUrl, settings.selfMusicUrl]);
+
+  const launchInstalledApp = useCallback((appId: string) => {
+    void launchInstalledAppById(appId, installedApps).then((result) => notify(result.message));
+  }, [installedApps, notify]);
+
+  const chooseWallpaper = useCallback((wallpaperId: string) => {
+    setSettings((previous) => ({ ...previous, wallpaper: wallpaperId }));
+  }, []);
 
   const submitAssistant = async (rawText?: string) => {
     const text = (rawText ?? draft).trim();
@@ -659,17 +658,9 @@ function App() {
               </div>
               <CardGrid focusKey="HOME-FEATURED-GRID" className="featured-grid">
                 {FEATURED_APPS.slice(0, 3).map((app, index) => (
-                  <FocusableCard id={app.id} title={app.name} className={'featured-card glass-panel card-' + app.id} data-tv-focus="true" key={app.id} onSelect={() => void runApp(app.target)}>
-                    <div className="card-cardinal"><span>0{index + 1}</span><ArrowRight size={16} /></div>
-                    <AppSymbol app={app} />
-                    <div className="featured-card-text"><strong>{app.name}</strong><span>{app.subtitle}</span></div>
-                  </FocusableCard>
+                  <FeaturedAppCard key={app.id} app={app} index={index} onLaunch={runApp} />
                 ))}
-                <FocusableCard id="assistant" title="AI Assistant" className="featured-card assistant-card glass-panel" data-tv-focus="true" onSelect={openAssistant}>
-                  <div className="card-cardinal"><span>04</span><Sparkles size={16} /></div>
-                  <span className="app-symbol app-symbol-assistant"><Sparkles /></span>
-                  <div className="featured-card-text"><strong>AI Assistant</strong><span>Answers, timers, and voice control</span></div>
-                </FocusableCard>
+                <AssistantFeaturedCard onOpen={openAssistant} />
               </CardGrid>
             </section>
           </>
@@ -678,8 +669,8 @@ function App() {
         {view === 'apps' && (
           <section className="page-section">
             <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>Featured apps and apps detected on this TV.</p></div><label className="search-box glass-panel"><Search size={18} /><TVInput data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps…" /></label></div>
-            <div className="catalog-group"><h2>Featured Services <span>0{filteredApps.featured.length}</span></h2><CardGrid focusKey="APPS-FEATURED-GRID" className="app-catalog-grid">{filteredApps.featured.map((app) => <TVButton focusKey={'CATALOG-' + app.id} className={'catalog-card glass-panel card-' + app.id} data-tv-focus="true" key={app.id} onClick={() => void runApp(app.target)}><AppSymbol app={app} /><strong>{app.name}</strong><span>{app.subtitle}</span><div className="catalog-card-footer">{app.category}<ArrowRight size={16} /></div></TVButton>)}</CardGrid></div>
-            <div className="catalog-group"><h2>Installed on TV <span>{installedApps.length}</span></h2>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <TVButton focusKey={'INSTALLED-' + app.id} className="installed-row glass-panel" data-tv-focus="true" key={app.id} onClick={() => void launchInstalledAppById(app.id, installedApps).then((result) => notify(result.message))}><span className="installed-icon"><Grid2X2 /></span><span><strong>{app.name}</strong><small>{app.id}{app.version ? ' · v' + app.version : ''}</small></span><ArrowRight size={17} /></TVButton>)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
+            <div className="catalog-group"><h2>Featured Services <span>0{filteredApps.featured.length}</span></h2><CardGrid focusKey="APPS-FEATURED-GRID" className="app-catalog-grid">{filteredApps.featured.map((app) => <CatalogAppCard key={app.id} app={app} onLaunch={runApp} />)}</CardGrid></div>
+            <div className="catalog-group"><h2>Installed on TV <span>{installedApps.length}</span></h2>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
           </section>
         )}
 
@@ -704,19 +695,7 @@ function App() {
               </div>
               <CardGrid focusKey="SETTINGS-WALLPAPER-GRID" className="wallpaper-grid">
                 {WALLPAPERS.map((wallpaper) => (
-                  <TVButton
-                    className={'wallpaper-choice' + (settings.wallpaper === wallpaper.id ? ' selected' : '')}
-                    key={wallpaper.id}
-                    focusKey={'WALLPAPER-' + wallpaper.id}
-                    data-tv-focus="true"
-                    aria-pressed={settings.wallpaper === wallpaper.id}
-                    aria-label={'Choose wallpaper: ' + wallpaper.name}
-                    style={{ '--wallpaper-thumb': `url("${wallpaper.src}")` } as CSSProperties}
-                    onClick={() => updateSetting('wallpaper', wallpaper.id)}
-                  >
-                    <span className="wallpaper-choice-check" aria-hidden="true">{settings.wallpaper === wallpaper.id ? <Check size={17} /> : null}</span>
-                    <span className="wallpaper-choice-name">{wallpaper.name}</span>
-                  </TVButton>
+<WallpaperChoiceCard key={wallpaper.id} wallpaper={wallpaper} isSelected={settings.wallpaper === wallpaper.id} onChoose={chooseWallpaper} />
                 ))}
               </CardGrid>
             </section>

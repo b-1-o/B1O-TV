@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react';
+import { memo, type ButtonHTMLAttributes } from 'react';
 import { TVButton } from './FocusableControls';
 
 export interface FocusableCardProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'id' | 'title' | 'onClick'> {
@@ -8,7 +8,7 @@ export interface FocusableCardProps extends Omit<ButtonHTMLAttributes<HTMLButton
 }
 
 /** A TV card with a stable ID, visible focus state and OK/Enter activation. */
-export function FocusableCard({ id, title, onSelect, className, children, ...buttonProps }: FocusableCardProps) {
+export const FocusableCard = memo(function FocusableCard({ id, title, onSelect, className, children, ...buttonProps }: FocusableCardProps) {
   const ariaLabel = buttonProps['aria-label'] ?? title;
   return (
     <TVButton
@@ -21,4 +21,4 @@ export function FocusableCard({ id, title, onSelect, className, children, ...but
       {children ?? title}
     </TVButton>
   );
-}
+});

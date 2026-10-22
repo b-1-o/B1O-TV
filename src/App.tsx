@@ -2,6 +2,7 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState }
 import {
   ArrowRight,
   BookOpen,
+  Download,
   Check,
   Cloud,
   CloudFog,
@@ -21,6 +22,7 @@ import {
   Sparkles,
   Sun,
   Timer,
+  Upload,
   Volume2,
   X,
 } from 'lucide-react';
@@ -33,10 +35,10 @@ const SETTINGS_KEY = 'b1o-tv:settings';
 const TIMER_KEY = 'b1o-tv:timer';
 
 const WALLPAPERS = [
-  { id: 'main', name: 'Основные', src: new URL('../assets/main wp.jpg', import.meta.url).href, position: 'center' },
-  { id: 'canopy', name: 'Тёмный полог', src: new URL('../assets/dark-canopy.jpg', import.meta.url).href, position: 'center' },
-  { id: 'sakura', name: 'Туманная сакура', src: new URL('../assets/fog sakura.jpg', import.meta.url).href, position: 'center' },
-  { id: 'castle', name: 'Замок', src: new URL('../assets/castle.jpeg', import.meta.url).href, position: 'center' },
+  { id: 'main', name: 'Main', src: new URL('../assets/main wp.jpg', import.meta.url).href, position: 'center' },
+  { id: 'canopy', name: 'Dark Canopy', src: new URL('../assets/dark-canopy.jpg', import.meta.url).href, position: 'center' },
+  { id: 'sakura', name: 'Foggy Sakura', src: new URL('../assets/fog sakura.jpg', import.meta.url).href, position: 'center' },
+  { id: 'castle', name: 'Castle', src: new URL('../assets/castle.jpeg', import.meta.url).href, position: 'center' },
   { id: 'jzgk4', name: 'JZGK4', src: new URL('../assets/jZGK4.jpg', import.meta.url).href, position: 'center' },
   { id: 'palat', name: 'Palat', src: new URL('../assets/palat.jpeg', import.meta.url).href, position: 'center' },
   { id: 'wallhaven', name: 'Wallhaven', src: new URL('../assets/wallhaven-6lpoow.jpg', import.meta.url).href, position: 'center' },
@@ -52,13 +54,14 @@ const DEFAULT_SETTINGS: TVSettings = {
   selfMusicUrl: '',
   speakReplies: false,
   wallpaper: 'main',
+  temperatureUnit: 'F',
 };
 
 const FEATURED_APPS: TVApp[] = [
-  { id: 'youtube', name: 'YouTube', subtitle: 'Клиент Tizen без рекламы', category: 'Видео', symbol: 'YT', target: 'youtube' },
-  { id: 'jellyfin', name: 'Jellyfin', subtitle: 'Твоя домашняя библиотека', category: 'Кино и сериалы', symbol: 'JF', target: 'jellyfin' },
-  { id: 'selfmusic', name: 'SelfMusic', subtitle: 'Музыка на твоих условиях', category: 'Музыка', symbol: 'SM', target: 'selfmusic' },
-  { id: 'browser', name: 'Браузер', subtitle: 'Интернет и веб-приложения', category: 'Инструменты', symbol: 'WWW', target: 'browser' },
+  { id: 'youtube', name: 'YouTube', subtitle: 'TV video client', category: 'Video', symbol: 'YT', target: 'youtube' },
+  { id: 'jellyfin', name: 'Jellyfin', subtitle: 'Your home media library', category: 'Movies & TV', symbol: 'JF', target: 'jellyfin' },
+  { id: 'selfmusic', name: 'SelfMusic', subtitle: 'Your music, your way', category: 'Music', symbol: 'SM', target: 'selfmusic' },
+  { id: 'browser', name: 'Browser', subtitle: 'Websites and web apps', category: 'Tools', symbol: 'WWW', target: 'browser' },
 ];
 
 function readSettings(): TVSettings {
@@ -73,6 +76,9 @@ function readSettings(): TVSettings {
     }
     if (!WALLPAPERS.some((wallpaper) => wallpaper.id === settings.wallpaper)) {
       settings.wallpaper = DEFAULT_SETTINGS.wallpaper;
+    }
+    if (settings.temperatureUnit !== 'F' && settings.temperatureUnit !== 'C') {
+      settings.temperatureUnit = DEFAULT_SETTINGS.temperatureUnit;
     }
     return settings;
   } catch {
@@ -129,7 +135,7 @@ function App() {
   const [voiceListening, setVoiceListening] = useState(false);
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<AssistantMessage[]>([
-    createAssistantMessage('assistant', 'Я B1O Assistant. Могу отвечать на вопросы через подключённый AI backend, сохранять заметки, ставить таймеры и открывать установленные приложения.'),
+    createAssistantMessage('assistant', 'I’m B1O Assistant. I can answer questions, remember notes, set timers, and open installed apps. Speak or type in English or Russian.'),
   ]);
   const [timer, setTimer] = useState<ActiveTimer | null>(readTimer);
   const [remainingMs, setRemainingMs] = useState(0);

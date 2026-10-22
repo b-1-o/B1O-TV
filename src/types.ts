@@ -27,6 +27,7 @@ export interface TVSettings {
   jellyfinUrl: string;
   selfMusicUrl: string;
   speakReplies: boolean;
+  wallpaper: string;
 }
 
 export interface WeatherSnapshot {

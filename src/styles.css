@@ -880,3 +880,149 @@ body { background: #030509; color: #f3f6fb; }
 @media (prefers-reduced-motion: reduce) {
   .assistant-panel.glass-panel { animation: none !important; }
 }
+
+
+/* Unified B1O TV material system — modeled on the approved floating dock.
+   Keep the same colorless white reflection; the selected wallpaper provides every hue. */
+:root {
+  --glass-clear: rgba(255,255,255,.045);
+  --glass-regular: rgba(255,255,255,.075);
+  --glass-edge: rgba(255,255,255,.22);
+  --glass-specular: rgba(255,255,255,.4);
+  --glass-shadow: 0 14px 40px rgba(0,0,0,.24);
+}
+:where(.glass-panel, .featured-card, .catalog-card, .installed-row, .library-card,
+.settings-card, .note-area, .empty-state, .search-box, .notice-card, .wallpaper-choice,
+.weather-panel) {
+  border: 1px solid var(--glass-edge);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.018) 42%, rgba(255,255,255,.045)),
+    var(--glass-clear);
+  box-shadow: inset 0 1px 0 var(--glass-specular), inset 0 -1px 0 rgba(255,255,255,.055), var(--glass-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.weather-panel {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.featured-card, .catalog-card, .installed-row, .settings-card, .library-card,
+.note-area, .empty-state, .search-box, .notice-card, .wallpaper-choice {
+  color: #f5f5f5;
+}
+.featured-card::before {
+  background: rgba(255,255,255,.055);
+  filter: blur(38px);
+}
+.featured-card:hover, .catalog-card:hover, .installed-row:hover, .wallpaper-choice:hover {
+  border-color: rgba(255,255,255,.34);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.42), inset 0 -1px 0 rgba(255,255,255,.06), 0 18px 44px rgba(0,0,0,.28);
+}
+.assistant-card, .catalog-card, .featured-card,
+.settings-card, .library-card, .note-area, .empty-state, .search-box, .notice-card {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.018) 42%, rgba(255,255,255,.045)),
+    rgba(255,255,255,.025);
+}
+.app-symbol, .app-symbol-youtube, .app-symbol-jellyfin, .app-symbol-selfmusic, .app-symbol-assistant {
+  color: #f5f5f5;
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.055);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.23), 0 10px 25px rgba(0,0,0,.15);
+}
+.jellyfin-art, .music-art {
+  color: rgba(255,255,255,.9);
+  background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.012));
+}
+.library-card-copy { background: transparent; }
+.library-card-copy h2, .settings-card-head h2, .note-area-title h2,
+.catalog-card > strong, .installed-row strong { color: #fff; }
+.library-card-copy p, .settings-card-head p, .field-help, .note-area-title p,
+.catalog-card > span:not(.app-symbol), .installed-row small { color: rgba(255,255,255,.68); }
+
+/* Inputs and action controls use the same neutral clear material, not tinted gradients. */
+:where(.primary-button, .secondary-button, .icon-button, .small-icon-button,
+.voice-button, .test-voice-button, .assistant-form button, .island-activity-button,
+.island-dismiss, .wallpaper-choice-check) {
+  border: 1px solid rgba(255,255,255,.24);
+  color: #fff;
+  background: rgba(255,255,255,.055);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 8px 24px rgba(0,0,0,.15);
+}
+:where(.primary-button, .secondary-button, .assistant-form button, .test-voice-button) {
+  border-radius: 9999px;
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.primary-button:hover, .secondary-button:hover, .icon-button:hover, .small-icon-button:hover,
+.voice-button:hover, .assistant-form button:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,.4);
+  background: rgba(255,255,255,.12);
+}
+.primary-button {
+  color: #fff;
+  background: rgba(255,255,255,.12);
+}
+.primary-button:hover { background: rgba(255,255,255,.18); }
+.secondary-button { color: #fff; background: rgba(255,255,255,.045); }
+.field-label input:not([type="range"]), .assistant-form {
+  border-color: rgba(255,255,255,.2);
+  color: #fff;
+  background: rgba(255,255,255,.035);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15);
+}
+.field-label input::placeholder, .search-box input::placeholder,
+.assistant-form input::placeholder { color: rgba(255,255,255,.5); }
+.field-label input[type="range"] { accent-color: #fff; }
+.assistant-form button {
+  border-radius: 9999px;
+  color: #fff;
+  background: rgba(255,255,255,.11);
+}
+.assistant-capabilities span {
+  border-color: rgba(255,255,255,.18);
+  border-radius: 9999px;
+  color: rgba(255,255,255,.78);
+  background: rgba(255,255,255,.035);
+}
+.chat-message p {
+  border-color: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.92);
+  background: rgba(255,255,255,.045);
+}
+.chat-message.user p { color: #fff; background: rgba(255,255,255,.085); }
+.chat-avatar, .chat-message.user .chat-avatar {
+  border-color: rgba(255,255,255,.18);
+  color: #fff;
+  background: rgba(255,255,255,.065);
+}
+.island-orb, .timer-orb, .music-orb {
+  color: #fff;
+  border-color: rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08);
+}
+.island-wave i { background: rgba(255,255,255,.9); }
+.island-secondary { color: rgba(255,255,255,.9); border-left-color: rgba(255,255,255,.2); }
+.settings-saved { border-color: rgba(255,255,255,.2); color: rgba(255,255,255,.82); }
+.notice-card { color: rgba(255,255,255,.75); }
+.notice-card svg { color: #fff; }
+.wallpaper-choice-check { color: #fff; background: rgba(255,255,255,.12); }
+
+/* Strong high-contrast remote/keyboard focus remains above all translucent surfaces. */
+button:focus-visible, input:focus-visible, [data-tv-focus="true"]:focus {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.88), 0 0 15px rgba(255,255,255,.32);
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.glass-panel, .featured-card, .catalog-card, .installed-row, .library-card,
+  .settings-card, .note-area, .empty-state, .search-box, .notice-card, .wallpaper-choice,
+  .primary-button, .secondary-button, .dock-item, .floating-dock, .dynamic-island) {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}

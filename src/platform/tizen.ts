@@ -98,16 +98,16 @@ export function launchInstalledAppById(
 ): Promise<{ ok: boolean; message: string }> {
   const app = installedApps.find((item) => item.id === appId);
   const manager = window.tizen?.application;
-  if (!app) return Promise.resolve({ ok: false, message: 'Приложение больше не найдено в списке телевизора.' });
-  if (!manager?.launch) return Promise.resolve({ ok: false, message: 'Запуск приложений доступен только внутри Tizen TV.' });
+  if (!app) return Promise.resolve({ ok: false, message: 'App is no longer in the TV app list.' });
+  if (!manager?.launch) return Promise.resolve({ ok: false, message: 'App launching is only available inside a Tizen TV app.' });
 
   return new Promise((resolve) => {
     manager.launch(
       app.id,
-      () => resolve({ ok: true, message: app.name + ' запущен.' }),
+      () => resolve({ ok: true, message: app.name + ' launched.' }),
       (error) => resolve({
         ok: false,
-        message: 'Tizen не смог запустить приложение: ' + (error?.message || error?.name || 'неизвестная ошибка'),
+        message: 'Tizen could not launch the app: ' + (error?.message || error?.name || 'unknown error'),
       }),
     );
   });
@@ -125,7 +125,7 @@ export async function launchTVService(
   installedApps: InstalledTVApp[],
   urls: { jellyfinUrl: string; selfMusicUrl: string },
 ): Promise<{ ok: boolean; message: string }> {
-  if (target === 'assistant') return { ok: true, message: 'Ассистент уже открыт.' };
+  if (target === 'assistant') return { ok: true, message: 'Assistant is already open.' };
 
   const matcher = appNameMatchers[target];
   const app = installedApps.find((item) => matcher.test(item.name) || matcher.test(item.id));
@@ -135,10 +135,10 @@ export async function launchTVService(
     return new Promise((resolve) => {
       manager.launch(
         app.id,
-        () => resolve({ ok: true, message: 'Приложение запущено.' }),
+        () => resolve({ ok: true, message: 'App launched.' }),
         (error) => resolve({
           ok: false,
-          message: 'Tizen не смог запустить приложение: ' + (error?.message || error?.name || 'неизвестная ошибка'),
+          message: 'Tizen could not launch the app: ' + (error?.message || error?.name || 'unknown error'),
         }),
       );
     });
@@ -154,29 +154,29 @@ export async function launchTVService(
   if (!isTizenRuntime()) {
     return {
       ok: false,
-      message: 'Это браузерный прототип. На TV подключи приложение или проверь его установку в каталоге Tizen.',
+      message: 'This is a browser preview. On TV, install the app or check the Tizen app catalog.',
     };
   }
 
   const names: Record<Exclude<AppTarget, 'assistant'>, string> = {
-    youtube: 'совместимый YouTube-клиент',
+    youtube: 'a compatible YouTube client',
     jellyfin: 'Jellyfin',
     selfmusic: 'SelfMusic',
-    browser: 'браузер',
+    browser: 'browser',
   };
-  return { ok: false, message: 'Не найден установленный ' + names[target] + '. Проверь библиотеку приложений.' };
+  return { ok: false, message: 'Could not find installed ' + names[target] + '. Check the app library.' };
 }
 
 function openConfiguredUrl(rawUrl: string, serviceName: string): { ok: boolean; message: string } {
   try {
     const url = new URL(rawUrl.trim());
     if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
-      return { ok: false, message: 'Для ' + serviceName + ' укажи HTTPS URL (или локальный адрес для разработки).' };
+      return { ok: false, message: 'For ' + serviceName + ' requires an HTTPS URL (or a local development URL).' };
     }
     const opened = window.open(url.toString(), '_blank', 'noopener,noreferrer');
-    if (!opened) return { ok: false, message: 'Телевизор заблокировал новое окно. Установи клиент приложения или проверь настройку ссылки.' };
-    return { ok: true, message: serviceName + ' открыт.' };
+    if (!opened) return { ok: false, message: 'The TV blocked the new window. Install the app client or check the link settings.' };
+    return { ok: true, message: serviceName + ' opened.' };
   } catch {
-    return { ok: false, message: 'Адрес ' + serviceName + ' указан некорректно.' };
+    return { ok: false, message: 'The URL for ' + serviceName + ' is invalid.' };
   }
 }

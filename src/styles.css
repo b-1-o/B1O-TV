@@ -851,3 +851,32 @@ body { background: #030509; color: #f3f6fb; }
     border-radius: 28px;
   }
 }
+
+
+/* The assistant expands from the same top-center origin as the OLED island. */
+.assistant-overlay {
+  place-items: start center;
+  padding: 16px;
+}
+.assistant-panel.glass-panel {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  border-radius: 44px;
+  transform-origin: top center;
+  animation: island-expand .38s cubic-bezier(.2,.82,.2,1) both;
+}
+@keyframes island-expand {
+  from { opacity: 0; transform: translateY(-14px) scale(.92); border-radius: 9999px; }
+  to { opacity: 1; transform: translateY(0) scale(1); border-radius: 44px; }
+}
+@media (max-width: 760px) {
+  .assistant-overlay { padding: 8px; }
+  .assistant-panel.glass-panel {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-radius: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-panel.glass-panel { animation: none !important; }
+}

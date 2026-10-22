@@ -33,7 +33,6 @@ import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVServi
 
 const SETTINGS_KEY = 'b1o-tv:settings';
 const TIMER_KEY = 'b1o-tv:timer';
-const MUSIC_ACTIVITY_KEY = 'b1o-tv:music-activity';
 
 const WALLPAPERS = [
   { id: 'main', name: 'Основные', src: new URL('../assets/main wp.jpg', import.meta.url).href, position: 'center' },
@@ -97,14 +96,6 @@ function readTimer(): ActiveTimer | null {
   }
 }
 
-function readMusicActivity(): boolean {
-  try {
-    return localStorage.getItem(MUSIC_ACTIVITY_KEY) === 'active';
-  } catch {
-    return false;
-  }
-}
-
 function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
   if (code === 0) return isDay ? <Sun /> : <Moon />;
   if (code === 45 || code === 48) return <CloudFog />;
@@ -125,7 +116,7 @@ function AppSymbol({ app }: { app: TVApp }) {
 function App() {
   const [view, setView] = useState<View>('home');
   const [compactHome, setCompactHome] = useState(false);
-  const [musicActivity, setMusicActivity] = useState(readMusicActivity);
+  const [musicActivity, setMusicActivity] = useState(false);
   const [settings, setSettings] = useState<TVSettings>(readSettings);
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
@@ -169,15 +160,6 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'auto' });
     setCompactHome(false);
   }, [view]);
-
-  useEffect(() => {
-    try {
-      if (musicActivity) localStorage.setItem(MUSIC_ACTIVITY_KEY, 'active');
-      else localStorage.removeItem(MUSIC_ACTIVITY_KEY);
-    } catch {
-      // The activity indicator is optional if local storage is unavailable.
-    }
-  }, [musicActivity]);
 
   useEffect(() => {
     try {
@@ -340,7 +322,6 @@ function App() {
 
     if (target === 'selfmusic') {
       setMusicActivity(true);
-      try { localStorage.setItem(MUSIC_ACTIVITY_KEY, 'active'); } catch { /* Storage is optional. */ }
     }
 
     const result = await launchTVService(target, installedApps, {
@@ -350,7 +331,6 @@ function App() {
 
     if (target === 'selfmusic' && !result.ok) {
       setMusicActivity(false);
-      try { localStorage.removeItem(MUSIC_ACTIVITY_KEY); } catch { /* Storage is optional. */ }
     }
     notify(result.message);
     return result;

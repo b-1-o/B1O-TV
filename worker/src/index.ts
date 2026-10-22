@@ -5,10 +5,6 @@ interface ChatMessage {
   content: string;
 }
 
-interface AIResult {
-  response?: unknown;
-}
-
 interface AIBinding {
   run(
     model: string,
@@ -60,6 +56,55 @@ function sameToken(actual: string, expected: string): boolean {
     difference |= actual.charCodeAt(index) ^ expected.charCodeAt(index);
   }
   return difference === 0;
+}
+
+function textContent(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (!Array.isArray(value)) return "";
+
+  return value.map((part) => {
+    if (typeof part === "string") return part;
+    if (typeof part !== "object" || part === null) return "";
+    const item = part as { text?: unknown; content?: unknown };
+    if (typeof item.text === "string") return item.text;
+    if (typeof item.content === "string") return item.content;
+    return "";
+  }).join("").trim();
+}
+
+/**
+ * Workers AI can return a response field or an OpenAI-compatible choices
+ * structure. Some API wrappers nest the payload inside result, so support
+ * both formats without assuming one response shape.
+ */
+function extractAIText(value: unknown, depth = 0): string {
+  if (depth > 4 || typeof value !== "object" || value === null) return "";
+  const output = value as Record<string, unknown>;
+
+  const response = textContent(output.response);
+  if (response) return response;
+
+  const outputText = textContent(output.output_text);
+  if (outputText) return outputText;
+
+  if (Array.isArray(output.choices)) {
+    for (const entry of output.choices) {
+      if (typeof entry !== "object" || entry === null) continue;
+      const choice = entry as Record<string, unknown>;
+      if (typeof choice.message === "object" && choice.message !== null) {
+        const message = choice.message as Record<string, unknown>;
+        const content = textContent(message.content);
+        if (content) return content;
+      }
+      const text = textContent(choice.text);
+      if (text) return text;
+    }
+  }
+
+  const content = textContent(output.content);
+  if (content) return content;
+
+  return extractAIText(output.result, depth + 1);
 }
 
 function safeHistory(value: unknown): ChatMessage[] {
@@ -119,12 +164,12 @@ export default {
         messages,
         max_tokens: 700,
         temperature: 0.45
-      }) as AIResult;
-
-      if (typeof output?.response !== "string" || !output.response.trim()) {
-        return json({ error: "The AI model returned an empty response." }, 502);
+      });
+      const reply = extractAIText(output);
+      if (!reply) {
+        return json({ error: "The AI model returned no readable text. Please try again." }, 502);
       }
-      return json({ reply: output.response.trim().slice(0, 6_000) });
+      return json({ reply: reply.slice(0, 6_000) });
     } catch {
       // Do not expose model/provider internals or user prompts in errors.
       return json({ error: "AI is temporarily unavailable. Please try again." }, 502);

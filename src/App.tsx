@@ -33,6 +33,7 @@ import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVServi
 import { CardGrid, FocusGroup } from './components/tv/CardGrid';
 import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
 import { useTheme } from './contexts/ThemeContext';
+import { DEFAULT_CONFIG } from './defaultConfig';
 import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
 
 const LOGO_SRC = new URL('../assets/logo.jpg', import.meta.url).href;
@@ -50,18 +51,7 @@ const WALLPAPERS = [
   { id: 'wallhaven', name: 'Wallhaven', src: new URL('../assets/wallhaven-6lpoow.jpg', import.meta.url).href, position: 'center' },
 ] as const;
 
-const DEFAULT_SETTINGS: TVSettings = {
-  city: 'Los Angeles',
-  reduceMotion: false,
-  glassIntensity: 70,
-  aiEndpoint: 'https://b1o-tv-assistant.collab-docs-b1o.workers.dev',
-  aiToken: '',
-  jellyfinUrl: '',
-  selfMusicUrl: '',
-  speakReplies: false,
-  wallpaper: 'main',
-  temperatureUnit: 'F',
-};
+
 
 const FEATURED_APPS: TVApp[] = [
   { id: 'youtube', name: 'YouTube', subtitle: 'TV video client', category: 'Video', symbol: 'YT', target: 'youtube' },
@@ -73,22 +63,22 @@ const FEATURED_APPS: TVApp[] = [
 function readSettings(): TVSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
+    if (!raw) return DEFAULT_CONFIG;
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return DEFAULT_SETTINGS;
-    const settings = { ...DEFAULT_SETTINGS, ...(parsed as Partial<TVSettings>) };
+    if (!parsed || typeof parsed !== 'object') return DEFAULT_CONFIG;
+    const settings = { ...DEFAULT_CONFIG, ...(parsed as Partial<TVSettings>) };
     if (typeof settings.aiEndpoint !== 'string' || !settings.aiEndpoint.trim()) {
-      settings.aiEndpoint = DEFAULT_SETTINGS.aiEndpoint;
+      settings.aiEndpoint = DEFAULT_CONFIG.aiEndpoint;
     }
     if (!WALLPAPERS.some((wallpaper) => wallpaper.id === settings.wallpaper)) {
-      settings.wallpaper = DEFAULT_SETTINGS.wallpaper;
+      settings.wallpaper = DEFAULT_CONFIG.wallpaper;
     }
     if (settings.temperatureUnit !== 'F' && settings.temperatureUnit !== 'C') {
-      settings.temperatureUnit = DEFAULT_SETTINGS.temperatureUnit;
+      settings.temperatureUnit = DEFAULT_CONFIG.temperatureUnit;
     }
     return settings;
   } catch {
-    return DEFAULT_SETTINGS;
+    return DEFAULT_CONFIG;
   }
 }
 
@@ -402,10 +392,10 @@ function App() {
         if (payload.format !== 'b1o-tv-setup' || typeof payload.settings !== 'object' || payload.settings === null) {
           throw new Error('This is not a valid B1O TV setup file.');
         }
-        const imported = { ...DEFAULT_SETTINGS, ...(payload.settings as Partial<TVSettings>) };
-        if (!WALLPAPERS.some((wallpaper) => wallpaper.id === imported.wallpaper)) imported.wallpaper = DEFAULT_SETTINGS.wallpaper;
+        const imported = { ...DEFAULT_CONFIG, ...(payload.settings as Partial<TVSettings>) };
+        if (!WALLPAPERS.some((wallpaper) => wallpaper.id === imported.wallpaper)) imported.wallpaper = DEFAULT_CONFIG.wallpaper;
         if (imported.temperatureUnit !== 'C' && imported.temperatureUnit !== 'F') imported.temperatureUnit = 'F';
-        if (typeof imported.aiEndpoint !== 'string' || !imported.aiEndpoint.trim()) imported.aiEndpoint = DEFAULT_SETTINGS.aiEndpoint;
+        if (typeof imported.aiEndpoint !== 'string' || !imported.aiEndpoint.trim()) imported.aiEndpoint = DEFAULT_CONFIG.aiEndpoint;
         setSettings(imported);
         notify('TV setup imported successfully.');
       } catch (error) {

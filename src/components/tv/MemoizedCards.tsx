@@ -1,5 +1,5 @@
 import { memo, useCallback, type CSSProperties } from 'react';
-import { ArrowRight, Film, Grid2X2, Music2, Play, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, Film, Grid2X2, Music2, Play, Sparkles } from 'lucide-react';
 import type { AppTarget, InstalledTVApp, TVApp } from '../../types';
 import { FocusableCard } from './FocusableCard';
 import { TVButton } from './FocusableControls';
@@ -135,7 +135,7 @@ export const WallpaperChoiceCard = memo(function WallpaperChoiceCard({
       style={{ '--wallpaper-thumb': `url("${wallpaper.src}")` } as CSSProperties}
       onClick={handleChoose}
     >
-      <span className="wallpaper-choice-check" aria-hidden="true">{isSelected ? <Sparkles size={17} /> : null}</span>
+      <span className="wallpaper-choice-check" aria-hidden="true">{isSelected ? <Check size={17} /> : null}</span>
       <span className="wallpaper-choice-name">{wallpaper.name}</span>
     </TVButton>
   );

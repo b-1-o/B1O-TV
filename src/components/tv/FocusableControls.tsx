@@ -76,7 +76,7 @@ export function TVInput({ focusKey, className, disabled, type, ...props }: TVInp
   }, [disabled]);
   const handleArrowPress = useCallback((direction: string) => {
     const input = inputRef.current;
-    if (!input || input.type !== 'range' || (direction !== 'left' && direction !== 'right')) return true;
+    if (!input || disabled || input.type !== 'range' || (direction !== 'left' && direction !== 'right')) return true;
 
     const min = input.min === '' ? 0 : Number(input.min);
     const max = input.max === '' ? 100 : Number(input.max);

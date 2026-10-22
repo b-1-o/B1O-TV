@@ -27,7 +27,7 @@ jobs:
           cp docs/TV-SETUP.md tv-package/INSTALL.md
           cat > tv-package/SETUP-TRANSFER.txt <<'EOF'
           Configure B1O TV in the PC browser, then use Settings > Export TV Setup.
-          On the TV, open the same B1O TV build and choose Settings > Import TV Setup.
+          On the TV, open Settings > Import TV Setup and select the exported JSON file. Do not share the file or commit it to Git.
           The JSON includes the device token. Keep it private and delete it after import.
           This package contains the web project files, not a signed WGT.
           To install a WGT, open the files in Samsung Tizen Studio and sign with your own TV certificate.

@@ -461,7 +461,7 @@ function App() {
         setTimer(nextTimer);
         reply = 'Таймер запущен на ' + nextTimer.label + '. Пока B1O TV закрыт или выгружен системой, звук/системное уведомление не гарантируются.';
       } else if (intent?.kind === 'time') {
-        reply = 'Сейчас ' + new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date()) + '.';
+        reply = 'Time: ' + new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date()) + '.';
       } else if (intent?.kind === 'launch') {
         const result = await runApp(intent.target);
         reply = result.message;
@@ -539,9 +539,9 @@ function App() {
   voiceStartRef.current = startVoiceInput;
 
   const filteredApps = useMemo(() => {
-    const value = search.trim().toLocaleLowerCase('ru-RU');
-    const featured = FEATURED_APPS.filter((app) => !value || [app.name, app.subtitle, app.category].some((field) => field.toLocaleLowerCase('ru-RU').includes(value)));
-    const discovered = installedApps.filter((app) => !value || app.name.toLocaleLowerCase('ru-RU').includes(value));
+    const value = search.trim().toLocaleLowerCase('en-US');
+    const featured = FEATURED_APPS.filter((app) => !value || [app.name, app.subtitle, app.category].some((field) => field.toLocaleLowerCase('en-US').includes(value)));
+    const discovered = installedApps.filter((app) => !value || app.name.toLocaleLowerCase('en-US').includes(value));
     return { featured, discovered };
   }, [search, installedApps]);
 
@@ -606,7 +606,7 @@ function App() {
 
         {timer && (voiceListening || assistantBusy || assistantActivityText) && <span className="island-secondary"><Timer size={14} /><strong>{formatDuration(remainingMs)}</strong></span>}
         {musicActivity && (voiceListening || assistantBusy || assistantActivityText || timer) && (
-          <button className="island-activity-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic"><Music2 size={15} /></button>
+          <button className="island-activity-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Return to SelfMusic"><Music2 size={15} /></button>
         )}
         {timer && (voiceListening || assistantBusy || assistantActivityText) && <button className="island-dismiss" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Cancel timer"><X size={14} /></button>}
         {musicActivity && (voiceListening || assistantBusy || assistantActivityText || timer) && <button className="island-dismiss" data-tv-focus="true" onClick={() => setMusicActivity(false)} aria-label="Hide music activity"><X size={14} /></button>}
@@ -614,7 +614,7 @@ function App() {
       )}
 
       <header className="topbar">
-        <button className="brand" data-tv-focus="true" onClick={() => setView('home')} aria-label="B1O TV — главная">
+        <button className="brand" data-tv-focus="true" onClick={() => navigateToView('home')} aria-label="B1O TV — главная">
           <span className="brand-mark">b1o</span>
           <span className="brand-copy"><strong>B1O TV</strong></span>
         </button>
@@ -624,17 +624,17 @@ function App() {
         {view === 'home' && (
           <>
             <div className="home-stage">
-              <section className="hero-section" aria-label="Главный экран">
+              <section className="hero-section" aria-label="Home screen">
                 <div className="home-clock-column">
-                  <div className="clock" aria-label={'Сейчас ' + displayedClock}>{displayedClock}</div>
+                  <div className="clock" aria-label={'Time: ' + displayedClock}>{displayedClock}</div>
                   <div className="date-line">{displayedDate}</div>
                 </div>
 
-                <aside className="weather-panel" aria-label="Погода">
+                <aside className="weather-panel" aria-label="Weather">
                   <div className="weather-icon" aria-hidden="true">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>
                   <div className="weather-copy">
                     <strong>{weatherLoading ? '—' : weather ? Math.round(weather.temperatureF) + '°F' : '—'}</strong>
-                    <span>{weather ? describeWeather(weather.code) : weatherError ? 'Погода недоступна' : 'Загрузка…'}</span>
+                    <span>{weather ? describeWeather(weather.code) : weatherError ? 'Weather unavailable' : 'Loading…'}</span>
                     <small>{weather?.city ?? settings.city}</small>
                   </div>
                 </aside>
@@ -643,8 +643,8 @@ function App() {
 
             <section className="section-block featured-section media-catalog" id="media-section">
               <div className="section-heading">
-                <div><span className="eyebrow small">ТВОЯ БИБЛИОТЕКА</span><h2>Твоё медиа</h2></div>
-                <button className="text-action all-library-link" data-tv-focus="true" onClick={() => setView('apps')}>Вся библиотека <ArrowRight size={15} /></button>
+                <div><span className="eyebrow small">YOUR LIBRARY</span><h2>Your Media</h2></div>
+                <button className="text-action all-library-link" data-tv-focus="true" onClick={() => navigateToView('apps')}>Browse Apps <ArrowRight size={15} /></button>
               </div>
               <div className="featured-grid">
                 {FEATURED_APPS.slice(0, 3).map((app, index) => (
@@ -657,7 +657,7 @@ function App() {
                 <button className="featured-card assistant-card glass-panel" data-tv-focus="true" onClick={openAssistant}>
                   <div className="card-cardinal"><span>04</span><Sparkles size={16} /></div>
                   <span className="app-symbol app-symbol-assistant"><Sparkles /></span>
-                  <div className="featured-card-text"><strong>AI Assistant</strong><span>Ответы, таймеры и команды</span></div>
+                  <div className="featured-card-text"><strong>AI Assistant</strong><span>Answers, timers, and voice control</span></div>
                 </button>
               </div>
             </section>
@@ -666,30 +666,30 @@ function App() {
 
         {view === 'apps' && (
           <section className="page-section">
-            <div className="page-title-row"><div><span className="eyebrow small">ТВОЯ БИБЛИОТЕКА</span><h1>Приложения</h1><p>Избранное и приложения, которые обнаружил телевизор.</p></div><label className="search-box glass-panel"><Search size={18} /><input data-tv-focus="true" aria-label="Поиск приложений" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти приложение…" /></label></div>
-            <div className="catalog-group"><h2>Избранные сервисы <span>0{filteredApps.featured.length}</span></h2><div className="app-catalog-grid">{filteredApps.featured.map((app) => <button className={'catalog-card glass-panel card-' + app.id} data-tv-focus="true" key={app.id} onClick={() => void runApp(app.target)}><AppSymbol app={app} /><strong>{app.name}</strong><span>{app.subtitle}</span><div className="catalog-card-footer">{app.category}<ArrowRight size={16} /></div></button>)}</div></div>
-            <div className="catalog-group"><h2>Установлено на телевизоре <span>{installedApps.length}</span></h2>{installedApps.length ? <div className="installed-list">{filteredApps.discovered.map((app) => <button className="installed-row glass-panel" data-tv-focus="true" key={app.id} onClick={() => void launchInstalledAppById(app.id, installedApps).then((result) => notify(result.message))}><span className="installed-icon"><Grid2X2 /></span><span><strong>{app.name}</strong><small>{app.id}{app.version ? ' · v' + app.version : ''}</small></span><ArrowRight size={17} /></button>)}</div> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'Список приложений недоступен' : 'Список появится на телевизоре'}</strong><span>В браузере работает предпросмотр. На Samsung список загружается через Tizen Web API и его разрешения.</span></div>}</div>
+            <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>Избранное и приложения, которые обнаружил телевизор.</p></div><label className="search-box glass-panel"><Search size={18} /><input data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти приложение…" /></label></div>
+            <div className="catalog-group"><h2>Featured Services <span>0{filteredApps.featured.length}</span></h2><div className="app-catalog-grid">{filteredApps.featured.map((app) => <button className={'catalog-card glass-panel card-' + app.id} data-tv-focus="true" key={app.id} onClick={() => void runApp(app.target)}><AppSymbol app={app} /><strong>{app.name}</strong><span>{app.subtitle}</span><div className="catalog-card-footer">{app.category}<ArrowRight size={16} /></div></button>)}</div></div>
+            <div className="catalog-group"><h2>Installed on TV <span>{installedApps.length}</span></h2>{installedApps.length ? <div className="installed-list">{filteredApps.discovered.map((app) => <button className="installed-row glass-panel" data-tv-focus="true" key={app.id} onClick={() => void launchInstalledAppById(app.id, installedApps).then((result) => notify(result.message))}><span className="installed-icon"><Grid2X2 /></span><span><strong>{app.name}</strong><small>{app.id}{app.version ? ' · v' + app.version : ''}</small></span><ArrowRight size={17} /></button>)}</div> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
           </section>
         )}
 
         {view === 'library' && (
           <section className="page-section">
-            <div className="page-title-row"><div><span className="eyebrow small">ТВОЙ КОНТЕНТ</span><h1>Медиатека</h1><p>Единое место для кино, сериалов и музыки. Подключение сервисов настраивается отдельно.</p></div><button className="secondary-button" data-tv-focus="true" onClick={() => setView('settings')}><Settings2 size={17} /> Подключения</button></div>
+            <div className="page-title-row"><div><span className="eyebrow small">YOUR MEDIA</span><h1>Media Library</h1><p>One place for movies, shows, and music. Configure each service below.</p></div><button className="secondary-button" data-tv-focus="true" onClick={() => navigateToView('settings')}><Settings2 size={17} /> Connections</button></div>
             <div className="library-grid">
-              <article className="library-card glass-panel"><div className="library-art jellyfin-art"><Film /></div><div className="library-card-copy"><span className="eyebrow small">КИНО И СЕРИАЛЫ</span><h2>Jellyfin</h2><p>Домашняя библиотека, просмотр и продолжение с того места, где остановился.</p><button className="primary-button" data-tv-focus="true" onClick={() => void runApp('jellyfin')}><Play size={17} /> Открыть Jellyfin</button></div></article>
-              <article className="library-card glass-panel"><div className="library-art music-art"><Music2 /></div><div className="library-card-copy"><span className="eyebrow small">ЛИЧНАЯ МУЗЫКА</span><h2>SelfMusic</h2><p>Твои треки, обложки, избранное и очереди воспроизведения на собственном сервере.</p><button className="primary-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Play size={17} /> Открыть SelfMusic</button></div></article>
+              <article className="library-card glass-panel"><div className="library-art jellyfin-art"><Film /></div><div className="library-card-copy"><span className="eyebrow small">MOVIES & TV</span><h2>Jellyfin</h2><p>Your home library, playback, and continue watching.</p><button className="primary-button" data-tv-focus="true" onClick={() => void runApp('jellyfin')}><Play size={17} /> Open Jellyfin</button></div></article>
+              <article className="library-card glass-panel"><div className="library-art music-art"><Music2 /></div><div className="library-card-copy"><span className="eyebrow small">YOUR MUSIC</span><h2>SelfMusic</h2><p>Your tracks, cover art, favorites, and playlists on your own server.</p><button className="primary-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Play size={17} /> Open SelfMusic</button></div></article>
             </div>
-            <div className="note-area glass-panel"><div className="note-area-title"><BookOpen /><div><h2>Память ассистента</h2><p>Локальные заметки сохраняются в этом приложении.</p></div><button className="secondary-button" data-tv-focus="true" onClick={openAssistant}>Спросить ассистента</button></div>{notes.length ? <div className="notes-list">{notes.slice(-5).reverse().map((note) => <div className="note-row" key={note.id}><span>{note.text}</span><small>{new Date(note.createdAt).toLocaleDateString('ru-RU')}</small></div>)}</div> : <div className="empty-notes">Здесь появятся вещи, которые ты попросишь запомнить.</div>}</div>
+            <div className="note-area glass-panel"><div className="note-area-title"><BookOpen /><div><h2>Assistant Memory</h2><p>Notes are saved locally in this app.</p></div><button className="secondary-button" data-tv-focus="true" onClick={openAssistant}>Ask Assistant</button></div>{notes.length ? <div className="notes-list">{notes.slice(-5).reverse().map((note) => <div className="note-row" key={note.id}><span>{note.text}</span><small>{new Date(note.createdAt).toLocaleDateString('en-US')}</small></div>)}</div> : <div className="empty-notes">Things you ask the assistant to remember will appear here.</div>}</div>
           </section>
         )}
 
         {view === 'settings' && (
           <section className="page-section settings-page">
-            <div className="page-title-row"><div><span className="eyebrow small">ПОД ТЕБЯ</span><h1>Настройки среды</h1><p>Тема, погода, подключения и поведение оболочки.</p></div><span className="settings-saved"><Check size={15} /> Сохраняется автоматически</span></div>
-            <section className="wallpaper-library" aria-label="Обои">
+            <div className="page-title-row"><div><span className="eyebrow small">PERSONALIZE</span><h1>Settings</h1><p>Appearance, weather, service connections, and app behavior.</p></div><span className="settings-saved"><Check size={15} /> Saved automatically</span></div>
+            <section className="wallpaper-library" aria-label="Wallpapers">
               <div className="wallpaper-library-heading">
-                <div><span className="eyebrow small">ФОН</span><h2>Обои</h2></div>
-                <span>{WALLPAPERS.length} изображений</span>
+                <div><span className="eyebrow small">WALLPAPER</span><h2>Wallpapers</h2></div>
+                <span>{WALLPAPERS.length} wallpapers</span>
               </div>
               <div className="wallpaper-grid">
                 {WALLPAPERS.map((wallpaper) => (
@@ -698,7 +698,7 @@ function App() {
                     key={wallpaper.id}
                     data-tv-focus="true"
                     aria-pressed={settings.wallpaper === wallpaper.id}
-                    aria-label={'Выбрать обои: ' + wallpaper.name}
+                    aria-label={'Choose wallpaper: ' + wallpaper.name}
                     style={{ '--wallpaper-thumb': `url("${wallpaper.src}")` } as CSSProperties}
                     onClick={() => updateSetting('wallpaper', wallpaper.id)}
                   >
@@ -709,40 +709,40 @@ function App() {
               </div>
             </section>
             <div className="settings-grid">
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Cloud /><div><h2>Погода</h2><p>Выбери город для главного экрана.</p></div></div><label className="field-label">Город<input data-tv-focus="true" value={settings.city} onChange={(event) => updateSetting('city', event.target.value)} placeholder="Например, Burbank" /></label><p className="field-help">Текущая погода загружается через Open-Meteo. Геолокация автоматически не включается.</p></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Внешний вид</h2><p>Обои и материал плавающей навигации.</p></div></div><label className="field-label">Выразительность Liquid Glass <strong>{settings.glassIntensity}%</strong><input data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Уменьшить движение</strong><small>Отключает плавание фоновых слоёв.</small></span><input data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Медиасервисы</h2><p>Адреса твоих собственных серверов.</p></div></div><label className="field-label">Jellyfin URL<input data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="https://jellyfin.example.com" /></label><label className="field-label">SelfMusic URL<input data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="https://music.example.com" /></label><p className="field-help">Ссылки сохраняются локально. При прямом открытии сайт должен разрешать доступ и поддерживать браузер телевизора.</p></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI и голос</h2><p>Подключай сервер, не API-ключ в приложении.</p></div></div><label className="field-label">AI backend endpoint<input data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Токен устройства<input data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Токен из Cloudflare Worker" /></label><p className="field-help">Это токен доступа к твоему Worker, не ключ модели. Он хранится локально. Endpoint принимает POST JSON с message/history и возвращает reply.</p><label className="check-row"><span><strong>Озвучивать ответы</strong><small>Зависит от поддержки Speech Synthesis в Tizen.</small></span><input data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><button className="secondary-button test-voice-button" data-tv-focus="true" onClick={openAssistant}><Mic size={17} /> Проверить ассистента <ArrowRight size={15} /></button></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Cloud /><div><h2>Weather</h2><p>Choose the location and temperature units shown on Home.</p></div></div><label className="field-label">City<input data-tv-focus="true" value={settings.city} onChange={(event) => updateSetting('city', event.target.value)} placeholder="Los Angeles" /></label><label className="field-label">Temperature units<select data-tv-focus="true" value={settings.temperatureUnit} onChange={(event) => updateSetting('temperatureUnit', event.target.value === 'C' ? 'C' : 'F')}><option value="F">Fahrenheit (°F)</option><option value="C">Celsius (°C)</option></select></label><p className="field-help">Current conditions are provided by Open-Meteo. Location access is not requested automatically.</p></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Appearance</h2><p>Wallpaper and floating navigation material.</p></div></div><label className="field-label">Liquid Glass intensity <strong>{settings.glassIntensity}%</strong><input data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Reduce motion</strong><small>Disables non-essential animations.</small></span><input data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<input data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="https://jellyfin.example.com" /></label><label className="field-label">SelfMusic URL<input data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="https://music.example.com" /></label><p className="field-help">Links are saved locally. Each server must permit access from the TV browser.</p></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI & Voice</h2><p>Connect your backend endpoint. Keep model API keys on the server.</p></div></div><label className="field-label">AI backend endpoint<input data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Device token<input data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Your Cloudflare Worker token" /></label><p className="field-help">This is the device access token, not the model API key. It stays in local app storage. The endpoint accepts message/history JSON and returns a reply.</p><label className="check-row"><span><strong>Speak replies aloud</strong><small>Requires Speech Synthesis support in this Tizen browser.</small></span><input data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><button className="secondary-button test-voice-button" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={17} /> Test Voice Assistant <ArrowRight size={15} /></button></section>
             </div>
-            <div className="notice-card"><ShieldCheck size={18} /><span><strong>Приватность:</strong> заметки и настройки остаются в локальном хранилище приложения. Не добавляй секретные API-ключи в поля на телевизоре или в исходный код.</span></div>
+            <section className="settings-card glass-panel setup-transfer-card"><div className="settings-card-head"><Download /><div><h2>PC → TV Setup</h2><p>Configure everything here, then transfer your setup to the TV.</p></div></div><div className="setup-transfer-actions"><button className="primary-button" data-tv-focus="true" onClick={exportTVSetup}><Download size={17} /> Export TV Setup</button><button className="secondary-button" data-tv-focus="true" onClick={() => setupImportRef.current?.click()}><Upload size={17} /> Import TV Setup</button><input ref={setupImportRef} className="visually-hidden" type="file" accept="application/json,.json" aria-label="Import a B1O TV setup file" onChange={(event) => importTVSetup(event.target.files?.[0])} /></div><p className="field-help">Export creates b1o-tv-setup.json with your city, wallpaper, service URLs, temperature unit, AI endpoint, and device token. On the TV, open Settings → Import TV Setup and choose the same file. Keep it private because it contains your device token.</p></section>
           </section>
         )}
       </main>
 
-      <nav className="floating-dock" aria-label="Навигация B1O TV">
-        <button className={'dock-item' + (view === 'apps' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'apps' ? 'page' : undefined} onClick={() => setView('apps')}><Grid2X2 size={19} /><span>Приложения</span></button>
+      <nav className="floating-dock" aria-label="B1O TV navigation">
+        <button className={'dock-item' + (view === 'apps' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'apps' ? 'page' : undefined} onClick={() => navigateToView('apps')}><Grid2X2 size={19} /><span>Apps</span></button>
         <button className="dock-item" data-tv-focus="true" onClick={() => void runApp('jellyfin')}><Film size={19} /><span>Jellyfin</span></button>
         <button className="dock-item" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Music2 size={19} /><span>SelfMusic</span></button>
-        <button className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => setView('settings')}><Settings2 size={19} /><span>Настройки</span></button>
-        <button className="dock-item dock-assistant" data-tv-focus="true" onClick={openAssistant}><Mic size={19} /><span>Ассистент</span></button>
+        <button className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => navigateToView('settings')}><Settings2 size={19} /><span>Настройки</span></button>
+        <button className="dock-item dock-assistant" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={19} /><span>Assistant</span></button>
       </nav>
 
       {assistantOpen && (
-        <div className="assistant-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setAssistantOpen(false); }}>
+        <div className="assistant-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAssistant(); }}>
           <section className="assistant-panel glass-panel" role="dialog" aria-modal="true" aria-labelledby="assistant-title">
-            <header className="assistant-header"><div className="assistant-avatar"><Sparkles /></div><div><span className="eyebrow small">B1O INTELLIGENCE</span><h2 id="assistant-title">AI Assistant</h2><p>Голос, ответы и управление средой</p></div><button className="icon-button" data-tv-focus="true" onClick={() => setAssistantOpen(false)} aria-label="Закрыть ассистента"><X /></button></header>
-            <div className="assistant-capabilities"><span><Check size={13} /> Заметки</span><span><Check size={13} /> Таймеры</span><span><Check size={13} /> Приложения</span><span><Info size={13} /> AI backend: {settings.aiEndpoint && settings.aiToken ? 'параметры заполнены' : 'нужна настройка'}</span></div>
+            <header className="assistant-header"><div className="assistant-avatar"><Sparkles /></div><div><span className="eyebrow small">B1O INTELLIGENCE</span><h2 id="assistant-title">AI Assistant</h2><p>Voice, answers, and device control</p></div><button className="icon-button" data-tv-focus="true" onClick={closeAssistant} aria-label="Close assistant"><X /></button></header>
+            <div className="assistant-capabilities"><span><Check size={13} /> Notes</span><span><Check size={13} /> Timers</span><span><Check size={13} /> Apps</span><span><Info size={13} /> AI backend: {settings.aiEndpoint && settings.aiToken ? 'configured' : 'needs setup'}</span></div>
             <div className="chat-messages" aria-live="polite">
               {messages.slice(-30).map((message) => <div className={'chat-message ' + message.role} key={message.id}><span className="chat-avatar">{message.role === 'assistant' ? <Sparkles size={15} /> : 'Я'}</span><p>{message.text}</p></div>)}
               {assistantBusy && <div className="chat-message assistant"><span className="chat-avatar"><Sparkles size={15} /></span><p className="typing-indicator"><i /><i /><i /></p></div>}
             </div>
-            <div className="assistant-input-area"><button className={'voice-button' + (voiceListening ? ' listening' : '')} data-tv-focus="true" onClick={startVoiceInput} aria-label="Начать голосовой ввод">{voiceListening ? <LoaderCircle className="spin" /> : <Mic />}</button><form className="assistant-form" onSubmit={(event) => { event.preventDefault(); void submitAssistant(); }}><input data-tv-focus="true" data-assistant-input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Спроси что-нибудь…" aria-label="Сообщение ассистенту" /><button data-tv-focus="true" disabled={!draft.trim() || assistantBusy} aria-label="Отправить сообщение"><ArrowRight /></button></form></div>
-            <div className="assistant-footnote"><Volume2 size={13} /> Для открытия с клавиатуры предпросмотра нажми Alt + V. Аппаратная кнопка микрофона зависит от прошивки и TV API.</div>
+            <div className="assistant-input-area"><button className={'voice-button' + (voiceListening ? ' listening' : '')} data-tv-focus="true" onClick={startVoiceAssistant} aria-label="Start voice input">{voiceListening ? <LoaderCircle className="spin" /> : <Mic />}</button><form className="assistant-form" onSubmit={(event) => { event.preventDefault(); void submitAssistant(); }}><input data-tv-focus="true" data-assistant-input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask anything…" aria-label="Message the assistant" /><button data-tv-focus="true" disabled={!draft.trim() || assistantBusy} aria-label="Отправить сообщение"><ArrowRight /></button></form></div>
+            <div className="assistant-footnote"><Volume2 size={13} /> Press Alt + V to open the chat in the browser preview. The physical microphone button depends on TV firmware and API support.</div>
           </section>
         </div>
       )}
 
-      {toast && <div className="toast-message" role="status"><Check size={17} /><span>{toast}</span><button onClick={() => setToast('')} aria-label="Закрыть уведомление"><X size={14} /></button></div>}
+      {toast && <div className="toast-message" role="status"><Check size={17} /><span>{toast}</span><button onClick={() => setToast('')} aria-label="Dismiss notification"><X size={14} /></button></div>}
     </div>
   );
 }

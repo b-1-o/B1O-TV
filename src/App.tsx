@@ -18,7 +18,6 @@ import {
   Play,
   Search,
   Settings2,
-  ShieldCheck,
   Sparkles,
   Sun,
   Timer,
@@ -614,7 +613,7 @@ function App() {
       )}
 
       <header className="topbar">
-        <button className="brand" data-tv-focus="true" onClick={() => navigateToView('home')} aria-label="B1O TV — главная">
+        <button className="brand" data-tv-focus="true" onClick={() => navigateToView('home')} aria-label="B1O TV — Home">
           <span className="brand-mark">b1o</span>
           <span className="brand-copy"><strong>B1O TV</strong></span>
         </button>
@@ -666,7 +665,7 @@ function App() {
 
         {view === 'apps' && (
           <section className="page-section">
-            <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>Избранное и приложения, которые обнаружил телевизор.</p></div><label className="search-box glass-panel"><Search size={18} /><input data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти приложение…" /></label></div>
+            <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>Featured apps and apps detected on this TV.</p></div><label className="search-box glass-panel"><Search size={18} /><input data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps…" /></label></div>
             <div className="catalog-group"><h2>Featured Services <span>0{filteredApps.featured.length}</span></h2><div className="app-catalog-grid">{filteredApps.featured.map((app) => <button className={'catalog-card glass-panel card-' + app.id} data-tv-focus="true" key={app.id} onClick={() => void runApp(app.target)}><AppSymbol app={app} /><strong>{app.name}</strong><span>{app.subtitle}</span><div className="catalog-card-footer">{app.category}<ArrowRight size={16} /></div></button>)}</div></div>
             <div className="catalog-group"><h2>Installed on TV <span>{installedApps.length}</span></h2>{installedApps.length ? <div className="installed-list">{filteredApps.discovered.map((app) => <button className="installed-row glass-panel" data-tv-focus="true" key={app.id} onClick={() => void launchInstalledAppById(app.id, installedApps).then((result) => notify(result.message))}><span className="installed-icon"><Grid2X2 /></span><span><strong>{app.name}</strong><small>{app.id}{app.version ? ' · v' + app.version : ''}</small></span><ArrowRight size={17} /></button>)}</div> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
           </section>
@@ -723,20 +722,20 @@ function App() {
         <button className={'dock-item' + (view === 'apps' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'apps' ? 'page' : undefined} onClick={() => navigateToView('apps')}><Grid2X2 size={19} /><span>Apps</span></button>
         <button className="dock-item" data-tv-focus="true" onClick={() => void runApp('jellyfin')}><Film size={19} /><span>Jellyfin</span></button>
         <button className="dock-item" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Music2 size={19} /><span>SelfMusic</span></button>
-        <button className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => navigateToView('settings')}><Settings2 size={19} /><span>Настройки</span></button>
+        <button className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => navigateToView('settings')}><Settings2 size={19} /><span>Settings</span></button>
         <button className="dock-item dock-assistant" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={19} /><span>Assistant</span></button>
       </nav>
 
       {assistantOpen && (
-        <div className="assistant-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAssistant(); }}>
+        <div className={'assistant-overlay' + (assistantClosing ? ' is-closing' : '')} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAssistant(); }}>
           <section className="assistant-panel glass-panel" role="dialog" aria-modal="true" aria-labelledby="assistant-title">
             <header className="assistant-header"><div className="assistant-avatar"><Sparkles /></div><div><span className="eyebrow small">B1O INTELLIGENCE</span><h2 id="assistant-title">AI Assistant</h2><p>Voice, answers, and device control</p></div><button className="icon-button" data-tv-focus="true" onClick={closeAssistant} aria-label="Close assistant"><X /></button></header>
             <div className="assistant-capabilities"><span><Check size={13} /> Notes</span><span><Check size={13} /> Timers</span><span><Check size={13} /> Apps</span><span><Info size={13} /> AI backend: {settings.aiEndpoint && settings.aiToken ? 'configured' : 'needs setup'}</span></div>
             <div className="chat-messages" aria-live="polite">
-              {messages.slice(-30).map((message) => <div className={'chat-message ' + message.role} key={message.id}><span className="chat-avatar">{message.role === 'assistant' ? <Sparkles size={15} /> : 'Я'}</span><p>{message.text}</p></div>)}
+              {messages.slice(-30).map((message) => <div className={'chat-message ' + message.role} key={message.id}><span className="chat-avatar">{message.role === 'assistant' ? <Sparkles size={15} /> : 'You'}</span><p>{message.text}</p></div>)}
               {assistantBusy && <div className="chat-message assistant"><span className="chat-avatar"><Sparkles size={15} /></span><p className="typing-indicator"><i /><i /><i /></p></div>}
             </div>
-            <div className="assistant-input-area"><button className={'voice-button' + (voiceListening ? ' listening' : '')} data-tv-focus="true" onClick={startVoiceAssistant} aria-label="Start voice input">{voiceListening ? <LoaderCircle className="spin" /> : <Mic />}</button><form className="assistant-form" onSubmit={(event) => { event.preventDefault(); void submitAssistant(); }}><input data-tv-focus="true" data-assistant-input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask anything…" aria-label="Message the assistant" /><button data-tv-focus="true" disabled={!draft.trim() || assistantBusy} aria-label="Отправить сообщение"><ArrowRight /></button></form></div>
+            <div className="assistant-input-area"><button className={'voice-button' + (voiceListening ? ' listening' : '')} data-tv-focus="true" onClick={startVoiceAssistant} aria-label="Start voice input">{voiceListening ? <LoaderCircle className="spin" /> : <Mic />}</button><form className="assistant-form" onSubmit={(event) => { event.preventDefault(); void submitAssistant(); }}><input data-tv-focus="true" data-assistant-input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask anything…" aria-label="Message the assistant" /><button data-tv-focus="true" disabled={!draft.trim() || assistantBusy} aria-label="Send message"><ArrowRight /></button></form></div>
             <div className="assistant-footnote"><Volume2 size={13} /> Press Alt + V to open the chat in the browser preview. The physical microphone button depends on TV firmware and API support.</div>
           </section>
         </div>

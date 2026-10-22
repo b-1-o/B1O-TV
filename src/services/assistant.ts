@@ -31,7 +31,7 @@ export function parseLocalIntent(raw: string): LocalIntent | null {
     return { kind: 'recall' };
   }
 
-  const timerMatch = text.match(/(?:таймер|отсч[её]т)[^\d]{0,28}(\d+)\s*(секунд(?:у|ы)?|сек|минут(?:у|ы)?|мин|час(?:а|ов)?|ч)\b/);
+  const timerMatch = text.match(/(?:таймер|отсч[её]т)[^\d]{0,28}(\d+)\s*(секунд(?:у|ы)?|сек|минут(?:у|ы)?|мин|час(?:а|ов)?|ч)(?=\s|$|[,.!?])/);
   if (timerMatch) {
     const amount = Number(timerMatch[1]);
     const unit = timerMatch[2];
@@ -49,7 +49,7 @@ export function parseLocalIntent(raw: string): LocalIntent | null {
     return { kind: 'time' };
   }
 
-  const launchRequested = /\b(открой|запусти|включи|перейди|open|launch|play)\b/.test(text);
+  const launchRequested = /(открой|запусти|включи|перейди|open|launch|play)/.test(text);
   if (launchRequested) {
     if (text.includes('youtube') || text.includes('ютуб')) return { kind: 'launch', target: 'youtube' };
     if (text.includes('jellyfin') || text.includes('джеллифин') || text.includes('фильм')) return { kind: 'launch', target: 'jellyfin' };

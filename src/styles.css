@@ -30,12 +30,14 @@ button, input { font: inherit; }
 button { color: inherit; }
 button:not(:disabled) { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .4; }
-/* TV-remote focus must be unmistakable on both dark and bright wallpapers. */
-button:focus-visible, input:focus-visible, select:focus-visible, button:focus, input:focus, select:focus,
-button[data-tv-focused="true"], input[data-tv-focused="true"], select[data-tv-focused="true"] {
-  outline: 3px solid var(--focus);
-  outline-offset: 4px;
-  box-shadow: 0 0 0 2px rgba(0,0,0,.88), 0 0 14px rgba(255,255,255,.3);
+/* Native focus outlines are suppressed only in the actual Tizen runtime.
+   Desktop browser previews keep their normal accessible keyboard-focus treatment. */
+.app-shell.tv-runtime button:focus,
+.app-shell.tv-runtime a:focus,
+.app-shell.tv-runtime [tabindex]:focus,
+.app-shell.tv-runtime input:focus,
+.app-shell.tv-runtime select:focus {
+  outline: none !important;
 }
 ::selection { color: #fff; background: rgba(213, 226, 246, .24); }
 
@@ -1309,4 +1311,65 @@ button:disabled { transform: none; }
 }
 @media (max-width: 760px) {
   .brand-logo { width: 42px; height: 42px; border-radius: 13px; }
+}
+
+/* --------------------------------------------------------------------------
+   Samsung Tizen remote focus
+   Scale and layered shadow do not participate in layout, so adjacent cards
+   stay anchored while the focused item rises above them.
+   -------------------------------------------------------------------------- */
+.app-shell.tv-runtime button,
+.app-shell.tv-runtime a,
+.app-shell.tv-runtime input,
+.app-shell.tv-runtime select,
+.app-shell.tv-runtime [tabindex] {
+  transition: transform .16s ease-out, box-shadow .16s ease-out;
+  transform-origin: center center;
+}
+
+.app-shell.tv-runtime [data-tv-focused="true"] {
+  position: relative;
+  z-index: 20;
+  outline: none !important;
+  transform-origin: center center;
+  transform: scale(1.025);
+  will-change: transform;
+  box-shadow:
+    0 0 0 1px rgba(228, 236, 248, .56),
+    0 0 17px rgba(198, 213, 237, .18),
+    0 12px 30px rgba(0, 0, 0, .30);
+}
+
+/* Bigger surfaces receive a slightly stronger lift and halo. */
+.app-shell.tv-runtime .featured-card[data-tv-focused="true"],
+.app-shell.tv-runtime .catalog-card[data-tv-focused="true"],
+.app-shell.tv-runtime .installed-row[data-tv-focused="true"],
+.app-shell.tv-runtime .wallpaper-choice[data-tv-focused="true"] {
+  transform: scale(1.045);
+  box-shadow:
+    0 0 0 1px rgba(232, 239, 249, .72),
+    0 0 0 4px rgba(210, 223, 241, .065),
+    0 0 25px rgba(194, 211, 238, .22),
+    0 18px 42px rgba(0, 0, 0, .38);
+}
+
+/* Keep the dock and small actions balanced: a quieter, tighter glow. */
+.app-shell.tv-runtime .dock-item[data-tv-focused="true"],
+.app-shell.tv-runtime .icon-button[data-tv-focused="true"],
+.app-shell.tv-runtime .small-icon-button[data-tv-focused="true"],
+.app-shell.tv-runtime .text-action[data-tv-focused="true"],
+.app-shell.tv-runtime .island-main[data-tv-focused="true"],
+.app-shell.tv-runtime .voice-button[data-tv-focused="true"] {
+  transform: scale(1.035);
+}
+
+/* Never animate layout properties: width, height, margin and padding stay fixed. */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.tv-runtime button,
+  .app-shell.tv-runtime a,
+  .app-shell.tv-runtime input,
+  .app-shell.tv-runtime select,
+  .app-shell.tv-runtime [tabindex] {
+    transition-duration: 0s;
+  }
 }

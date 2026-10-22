@@ -39,6 +39,40 @@ declare global {
   }
 }
 
+const SPATIAL_REMOTE_KEY_CODES = new Set([13, 37, 38, 39, 40]);
+const SPATIAL_REMOTE_KEY_NAMES = /^(arrow(left|right|up|down)|left|right|up|down|enter|return)$/i;
+
+/** Register keys exposed by Samsung TV and release them when the app unmounts. */
+export function registerSpatialRemoteKeys(): () => void {
+  const input = window.tizen?.tvinputdevice;
+  if (!input?.getSupportedKeys || !input.registerKey) return () => undefined;
+
+  const registered: string[] = [];
+  try {
+    const supported = input.getSupportedKeys();
+    const names = supported
+      .filter((key) => SPATIAL_REMOTE_KEY_CODES.has(key.code) || SPATIAL_REMOTE_KEY_NAMES.test(key.name))
+      .map((key) => key.name);
+
+    for (const name of new Set(names)) {
+      try {
+        input.registerKey(name);
+        registered.push(name);
+      } catch {
+        // Firmware may reserve one key; keep the other registered keys available.
+      }
+    }
+  } catch {
+    return () => undefined;
+  }
+
+  return () => {
+    for (const name of registered) {
+      try { input.unregisterKey?.(name); } catch { /* Key may have been released already. */ }
+    }
+  };
+}
+
 export function registerVoiceRemoteKey(onVoice: () => void): () => void {
   const input = window.tizen?.tvinputdevice;
   if (!input?.getSupportedKeys || !input.registerKey) return () => undefined;

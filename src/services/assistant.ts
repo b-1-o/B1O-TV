@@ -107,17 +107,17 @@ export function formatDuration(milliseconds: number): string {
 export function resolveAssistantEndpoint(endpoint: string): URL {
   const cleanEndpoint = endpoint.trim();
   if (!cleanEndpoint) {
-    throw new Error('Для свободных ответов подключи AI backend в настройках. Локально я уже умею ставить таймеры, сохранять заметки и открывать доступные приложения.');
+    throw new Error('Connect an AI backend in Settings for open-ended answers. Timers, notes, and app launching also work locally.');
   }
 
   let url: URL;
   try {
     url = new URL(cleanEndpoint);
   } catch {
-    throw new Error('Адрес AI backend указан некорректно.');
+    throw new Error('The AI backend URL is invalid.');
   }
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1'))) {
-    throw new Error('Для AI backend используй HTTPS.');
+    throw new Error('Use HTTPS for the AI backend.');
   }
 
   let path = url.pathname;
@@ -148,10 +148,10 @@ export async function askConfiguredAssistant(endpoint: string, message: string, 
     const data: unknown = await response.json().catch(() => null);
     if (!response.ok) {
       if (response.status === 401) {
-        throw new Error('Токен устройства не совпадает с секретом Cloudflare Worker. Открой Настройки → AI и голос и вставь тот же токен, с которым проходит запрос через curl.');
+        throw new Error('The device token does not match the Cloudflare Worker secret. In Settings → AI & Voice, enter the same token used for a successful backend request.');
       }
       if (response.status === 503) {
-        throw new Error('AI backend не настроен. Проверь секрет ASSISTANT_TOKEN и публикацию Worker в Cloudflare.');
+        throw new Error('The AI backend is not configured. Check the ASSISTANT_TOKEN secret and the deployed Cloudflare Worker.');
       }
       if (typeof data === 'object' && data !== null && 'error' in data && typeof data.error === 'string') {
         throw new Error(data.error);
@@ -164,10 +164,10 @@ export async function askConfiguredAssistant(endpoint: string, message: string, 
     throw new Error('AI backend должен вернуть JSON с полем reply.');
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('Ассистент не ответил за 25 секунд. Попробуй ещё раз.');
+      throw new Error('The assistant did not respond within 25 seconds. Try again.');
     }
     if (error instanceof Error) throw error;
-    throw new Error('Не удалось связаться с AI backend.');
+    throw new Error('Could not reach the AI backend.');
   } finally {
     window.clearTimeout(timeout);
   }

@@ -28,6 +28,7 @@ export interface TVSettings {
   selfMusicUrl: string;
   speakReplies: boolean;
   wallpaper: string;
+  temperatureUnit: 'F' | 'C';
 }
 
 export interface WeatherSnapshot {

@@ -21,7 +21,7 @@ After deployment, the endpoint is:
 
     https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev/api/assistant
 
-Enter that HTTPS URL in B1O TV Settings → AI backend endpoint, and paste the same ASSISTANT_TOKEN into the local device-token field. The token is stored in the TV app's local settings, not in the repository.
+Enter either the Worker origin (`https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev`) or the full endpoint (`https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev/api/assistant`) in B1O TV Settings → AI backend endpoint; the client automatically appends `/api/assistant` when needed. Paste the same ASSISTANT_TOKEN into the local device-token field. The token is stored in the TV app's local settings, not in the repository.
 
 ## API contract
 

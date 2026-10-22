@@ -104,7 +104,7 @@ export function formatDuration(milliseconds: number): string {
   return String(minutes).padStart(2, '0') + ':' + String(remainingSeconds).padStart(2, '0');
 }
 
-export async function askConfiguredAssistant(endpoint: string, message: string, history: AssistantMessage[] = [], token = ''): Promise<string> {
+export function resolveAssistantEndpoint(endpoint: string): URL {
   const cleanEndpoint = endpoint.trim();
   if (!cleanEndpoint) {
     throw new Error('Для свободных ответов подключи AI backend в настройках. Локально я уже умею ставить таймеры, сохранять заметки и открывать доступные приложения.');
@@ -119,6 +119,16 @@ export async function askConfiguredAssistant(endpoint: string, message: string, 
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1'))) {
     throw new Error('Для AI backend используй HTTPS.');
   }
+
+  const path = url.pathname.replace(/\\/+$/, '');
+  if (!path.endsWith('/api/assistant')) {
+    url.pathname = (path || '') + '/api/assistant';
+  }
+  return url;
+}
+
+export async function askConfiguredAssistant(endpoint: string, message: string, history: AssistantMessage[] = [], token = ''): Promise<string> {
+  const url = resolveAssistantEndpoint(endpoint);
 
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 25_000);

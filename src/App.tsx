@@ -1,6 +1,5 @@
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowDown,
   ArrowRight,
   BookOpen,
   Check,

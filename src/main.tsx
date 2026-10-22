@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 import { initializeSpatialNavigation } from './platform/spatialNavigation';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 initializeSpatialNavigation();
 
@@ -14,6 +15,8 @@ if (!root) {
 
 createRoot(root).render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </React.StrictMode>,
 );

@@ -1441,3 +1441,260 @@ button:disabled { transform: none; }
 
 /* Wallpaper thumbnails are loaded only when Settings mounts this seven-item
    grid; there are no remote poster <img> elements inside the current card lists. */
+
+
+/* Persistent theme tokens. Dark stays the cinematic default palette whenever selected. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #05070b;
+  --panel: rgba(25, 25, 26, .68);
+  --panel-strong: rgba(30, 30, 31, .88);
+  --line: rgba(242, 246, 251, .13);
+  --line-soft: rgba(242, 246, 251, .075);
+  --text: #f3f6fb;
+  --muted: #a4afbd;
+  --subtle: #7d8999;
+  --silver: #d7e0ec;
+  --warm: #b7c3d4;
+  --focus: rgba(255, 255, 255, .98);
+  color: var(--text);
+  background: var(--page);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page: #edf0f4;
+  --panel: rgba(255, 255, 255, .74);
+  --panel-strong: rgba(255, 255, 255, .94);
+  --line: rgba(34, 43, 56, .16);
+  --line-soft: rgba(34, 43, 56, .08);
+  --text: #19212c;
+  --muted: #596678;
+  --subtle: #748093;
+  --silver: #58677a;
+  --warm: #4d5a6b;
+  --focus: rgba(63, 75, 91, .98);
+  color: var(--text);
+  background: var(--page);
+}
+
+[data-theme="light"] body {
+  color: #19212c;
+  background: #edf0f4;
+}
+
+[data-theme="light"] .app-shell {
+  color: #19212c;
+  background:
+    radial-gradient(ellipse at 53% 14%, rgba(151, 166, 190, .19), transparent 40%),
+    radial-gradient(ellipse at 5% 75%, rgba(184, 194, 209, .22), transparent 36%),
+    linear-gradient(135deg, #f7f8fa 0%, #edf0f4 52%, #e7ebf0 100%);
+}
+
+[data-theme="light"] .app-shell::before {
+  opacity: .22;
+  filter: brightness(1.08) saturate(.64);
+}
+
+[data-theme="light"] .app-shell::after {
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(247,249,252,.18) 48%, rgba(237,240,244,.72));
+}
+
+[data-theme="light"] .topbar {
+  border-bottom-color: rgba(28, 37, 50, .10);
+  background: linear-gradient(180deg, rgba(250,251,253,.94), rgba(245,247,250,.78));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-theme="light"] .brand-copy strong,
+[data-theme="light"] .clock,
+[data-theme="light"] .date-line,
+[data-theme="light"] .section-heading h2,
+[data-theme="light"] .page-title-row h1,
+[data-theme="light"] .wallpaper-library-heading h2,
+[data-theme="light"] .catalog-group h2,
+[data-theme="light"] .settings-card-head h2,
+[data-theme="light"] .library-card-copy h2,
+[data-theme="light"] .note-area-title h2 {
+  color: #19212c;
+}
+
+[data-theme="light"] .brand-copy small,
+[data-theme="light"] .eyebrow,
+[data-theme="light"] .eyebrow.small,
+[data-theme="light"] .page-title-row p,
+[data-theme="light"] .wallpaper-library-heading > span,
+[data-theme="light"] .field-help,
+[data-theme="light"] .settings-card-head p,
+[data-theme="light"] .note-area-title p,
+[data-theme="light"] .library-card-copy p,
+[data-theme="light"] .catalog-card > span:not(.app-symbol),
+[data-theme="light"] .installed-row small {
+  color: #657184;
+}
+
+[data-theme="light"] .weather-panel,
+[data-theme="light"] .catalog-mode .weather-panel {
+  background: rgba(255,255,255,.46);
+  border: 1px solid rgba(42, 53, 69, .10);
+  border-radius: 24px;
+  box-shadow: 0 14px 36px rgba(55, 65, 82, .08);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-theme="light"] .weather-copy { text-shadow: none; }
+[data-theme="light"] .weather-copy strong { color: #19212c; }
+[data-theme="light"] .weather-copy span { color: #344052; }
+[data-theme="light"] .weather-copy small { color: #687487; }
+[data-theme="light"] .weather-icon { color: #344052; filter: none; }
+
+[data-theme="light"] .featured-card,
+[data-theme="light"] .catalog-card,
+[data-theme="light"] .installed-row,
+[data-theme="light"] .settings-card,
+[data-theme="light"] .library-card,
+[data-theme="light"] .note-area,
+[data-theme="light"] .empty-state,
+[data-theme="light"] .search-box,
+[data-theme="light"] .notice-card,
+[data-theme="light"] .glass-panel {
+  color: #19212c;
+  border-color: rgba(36, 47, 63, .12);
+  background: linear-gradient(145deg, rgba(255,255,255,.97), rgba(244,246,249,.94));
+  box-shadow: 0 12px 34px rgba(45, 56, 72, .09), inset 0 1px rgba(255,255,255,.96);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-theme="light"] .featured-card,
+[data-theme="light"] .catalog-card,
+[data-theme="light"] .installed-row,
+[data-theme="light"] .wallpaper-choice {
+  transition: transform .16s ease-out, border-color .16s ease-out;
+}
+
+[data-theme="light"] .featured-card::before { content: none; filter: none; }
+[data-theme="light"] .featured-card-text strong,
+[data-theme="light"] .catalog-card > strong,
+[data-theme="light"] .installed-row strong,
+[data-theme="light"] .library-card-copy h2,
+[data-theme="light"] .check-row strong { color: #19212c; }
+[data-theme="light"] .featured-card-text span,
+[data-theme="light"] .library-card-copy p,
+[data-theme="light"] .catalog-card-footer { color: #596678; }
+[data-theme="light"] .app-symbol,
+[data-theme="light"] .app-symbol-youtube,
+[data-theme="light"] .app-symbol-jellyfin,
+[data-theme="light"] .app-symbol-selfmusic,
+[data-theme="light"] .app-symbol-assistant {
+  color: #293546;
+  border-color: rgba(36, 47, 63, .12);
+  background: linear-gradient(145deg, #fff, #e5eaf1);
+  box-shadow: inset 0 1px rgba(255,255,255,.9), 0 8px 20px rgba(45,56,72,.08);
+}
+[data-theme="light"] .jellyfin-art,
+[data-theme="light"] .music-art { background: linear-gradient(145deg, #f5f7fa, #e5eaf1); }
+
+[data-theme="light"] .primary-button,
+[data-theme="light"] .secondary-button,
+[data-theme="light"] .icon-button,
+[data-theme="light"] .small-icon-button,
+[data-theme="light"] .voice-button,
+[data-theme="light"] .test-voice-button,
+[data-theme="light"] .assistant-form button,
+[data-theme="light"] .island-activity-button,
+[data-theme="light"] .island-dismiss,
+[data-theme="light"] .wallpaper-choice-check {
+  color: #263244;
+  border-color: rgba(38, 50, 68, .18);
+  background: rgba(255,255,255,.84);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.98), 0 5px 16px rgba(45,56,72,.08);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+[data-theme="light"] .primary-button:hover,
+[data-theme="light"] .secondary-button:hover,
+[data-theme="light"] .icon-button:hover,
+[data-theme="light"] .small-icon-button:hover,
+[data-theme="light"] .voice-button:hover,
+[data-theme="light"] .assistant-form button:hover {
+  color: #141c28;
+  border-color: rgba(38,50,68,.3);
+  background: #fff;
+}
+[data-theme="light"] .field-label { color: #394659; }
+[data-theme="light"] .field-label input:not([type="range"]),
+[data-theme="light"] .assistant-form,
+[data-theme="light"] .search-box input,
+[data-theme="light"] select {
+  color: #1c2634;
+  border-color: rgba(37,49,66,.17);
+  background: rgba(255,255,255,.86);
+  box-shadow: inset 0 1px 2px rgba(31,44,60,.045);
+}
+[data-theme="light"] .field-label input::placeholder,
+[data-theme="light"] .search-box input::placeholder,
+[data-theme="light"] .assistant-form input::placeholder { color: #7a8595; }
+[data-theme="light"] select option { color: #19212c; background: #fff; }
+[data-theme="light"] .field-label input[type="range"] { accent-color: #39485d; }
+[data-theme="light"] .check-row small { color: #6b7789; }
+[data-theme="light"] .settings-saved { color: #4d5a6b; border-color: rgba(37,49,66,.15); }
+[data-theme="light"] .notice-card { color: #566275; }
+[data-theme="light"] .notice-card strong { color: #202b3a; }
+
+[data-theme="light"] .floating-dock {
+  border-color: rgba(37,49,66,.16);
+  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(238,242,247,.93));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.98), 0 13px 36px rgba(45,56,72,.16);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+[data-theme="light"] .floating-dock::before { background: linear-gradient(90deg, transparent, rgba(70,83,102,.20), transparent); }
+[data-theme="light"] .dock-item { color: #536074; }
+[data-theme="light"] .dock-item:hover { color: #172131; background: rgba(40,53,72,.07); }
+[data-theme="light"] .dock-item.active { color: #172131; border-color: rgba(40,53,72,.11); background: #fff; box-shadow: inset 0 1px 0 #fff, 0 2px 7px rgba(45,56,72,.08); }
+[data-theme="light"] .dock-assistant { color: #26364a; }
+
+[data-theme="light"] .dynamic-island {
+  color: #fff;
+  background: #000;
+  box-shadow: 0 5px 22px rgba(0,0,0,.22);
+}
+[data-theme="light"] .dynamic-island .island-copy strong { color: #fff; }
+[data-theme="light"] .dynamic-island .island-copy small { color: rgba(255,255,255,.66); }
+[data-theme="light"] .dynamic-island .island-orb { color: #fff; background: #161616; }
+[data-theme="light"] .assistant-overlay {
+  background: rgba(34,42,54,.50);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+[data-theme="light"] .assistant-panel.glass-panel { color: #19212c; background: #f8f9fb; }
+[data-theme="light"] .chat-message p { color: #283446; border-color: rgba(37,49,66,.13); background: #e9edf3; }
+[data-theme="light"] .chat-message.user p { color: #19212c; background: #dce3ec; }
+[data-theme="light"] .chat-avatar,
+[data-theme="light"] .chat-message.user .chat-avatar { color: #273549; border-color: rgba(37,49,66,.13); background: #edf1f6; }
+[data-theme="light"] .assistant-capabilities span { color: #4f5c6f; border-color: rgba(37,49,66,.14); background: #edf1f6; }
+[data-theme="light"] .toast-message { color: #202a38; border-color: rgba(37,49,66,.14); background: rgba(248,249,251,.98); box-shadow: 0 14px 35px rgba(45,56,72,.15); }
+[data-theme="light"] .weather-icon svg { filter: none; }
+[data-theme="light"] .brand-logo { border-color: rgba(35,46,61,.15); box-shadow: 0 8px 20px rgba(45,56,72,.09); }
+
+.theme-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 5px 0 17px;
+  padding: 13px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--glass-clear);
+}
+.theme-setting-row > span { display: grid; gap: 4px; }
+.theme-setting-row strong { color: var(--text); font-size: 12px; }
+.theme-setting-row small { color: var(--muted); font-size: 10px; line-height: 1.45; }
+.theme-toggle-button { flex: 0 0 auto; white-space: nowrap; }
+@media (max-width: 600px) {
+  .theme-setting-row { align-items: flex-start; flex-direction: column; }
+}

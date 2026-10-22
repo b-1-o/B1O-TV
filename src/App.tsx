@@ -40,7 +40,7 @@ const DEFAULT_SETTINGS: TVSettings = {
   city: 'Los Angeles',
   reduceMotion: false,
   glassIntensity: 70,
-  aiEndpoint: '',
+  aiEndpoint: 'https://b1o-tv-assistant.collab-docs-b1o.workers.dev',
   aiToken: '',
   jellyfinUrl: '',
   selfMusicUrl: '',
@@ -67,7 +67,11 @@ function readSettings(): TVSettings {
     if (!raw) return DEFAULT_SETTINGS;
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...(parsed as Partial<TVSettings>) };
+    const settings = { ...DEFAULT_SETTINGS, ...(parsed as Partial<TVSettings>) };
+    if (typeof settings.aiEndpoint !== 'string' || !settings.aiEndpoint.trim()) {
+      settings.aiEndpoint = DEFAULT_SETTINGS.aiEndpoint;
+    }
+    return settings;
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -146,7 +150,7 @@ function App() {
   const notify = useCallback((message: string) => {
     setToast(message);
     if (toastTimer.current !== undefined) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(''), 3_000);
+    toastTimer.current = window.setTimeout(() => setToast(''), 1_800);
   }, []);
 
   useEffect(() => {
@@ -614,7 +618,7 @@ function App() {
         <div className="assistant-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setAssistantOpen(false); }}>
           <section className="assistant-panel glass-panel" role="dialog" aria-modal="true" aria-labelledby="assistant-title">
             <header className="assistant-header"><div className="assistant-avatar"><Sparkles /></div><div><span className="eyebrow small">B1O INTELLIGENCE</span><h2 id="assistant-title">AI Assistant</h2><p>Голос, ответы и управление средой</p></div><button className="icon-button" data-tv-focus="true" onClick={() => setAssistantOpen(false)} aria-label="Закрыть ассистента"><X /></button></header>
-            <div className="assistant-capabilities"><span><Check size={13} /> Заметки</span><span><Check size={13} /> Таймеры</span><span><Check size={13} /> Приложения</span><span><Info size={13} /> AI backend: {settings.aiEndpoint && settings.aiToken ? 'настроен' : 'не настроен'}</span></div>
+            <div className="assistant-capabilities"><span><Check size={13} /> Заметки</span><span><Check size={13} /> Таймеры</span><span><Check size={13} /> Приложения</span><span><Info size={13} /> AI backend: {settings.aiEndpoint && settings.aiToken ? 'параметры заполнены' : 'нужна настройка'}</span></div>
             <div className="chat-messages" aria-live="polite">
               {messages.slice(-30).map((message) => <div className={'chat-message ' + message.role} key={message.id}><span className="chat-avatar">{message.role === 'assistant' ? <Sparkles size={15} /> : 'Я'}</span><p>{message.text}</p></div>)}
               {assistantBusy && <div className="chat-message assistant"><span className="chat-avatar"><Sparkles size={15} /></span><p className="typing-indicator"><i /><i /><i /></p></div>}

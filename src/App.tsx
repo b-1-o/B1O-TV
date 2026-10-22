@@ -9,6 +9,7 @@ import {
   CloudSnow,
   Film,
   Grid2X2,
+  Home,
   Info,
   Library,
   LoaderCircle,
@@ -23,7 +24,6 @@ import {
   Sun,
   Timer,
   Volume2,
-  Wifi,
   X,
 } from 'lucide-react';
 import type { ActiveTimer, AppTarget, AssistantMessage, InstalledTVApp, TVApp, TVSettings, View, WeatherSnapshot } from './types';
@@ -35,6 +35,16 @@ const SETTINGS_KEY = 'b1o-tv:settings';
 const TIMER_KEY = 'b1o-tv:timer';
 const MUSIC_ACTIVITY_KEY = 'b1o-tv:music-activity';
 
+const WALLPAPERS = [
+  { id: 'main', name: 'Основные', src: new URL('../assets/main wp.jpg', import.meta.url).href, position: 'center' },
+  { id: 'canopy', name: 'Тёмный полог', src: new URL('../assets/dark-canopy.jpg', import.meta.url).href, position: 'center' },
+  { id: 'sakura', name: 'Туманная сакура', src: new URL('../assets/fog sakura.jpg', import.meta.url).href, position: 'center' },
+  { id: 'castle', name: 'Замок', src: new URL('../assets/castle.jpeg', import.meta.url).href, position: 'center' },
+  { id: 'jzgk4', name: 'JZGK4', src: new URL('../assets/jZGK4.jpg', import.meta.url).href, position: 'center' },
+  { id: 'palat', name: 'Palat', src: new URL('../assets/palat.jpeg', import.meta.url).href, position: 'center' },
+  { id: 'wallhaven', name: 'Wallhaven', src: new URL('../assets/wallhaven-6lpoow.jpg', import.meta.url).href, position: 'center' },
+] as const;
+
 const DEFAULT_SETTINGS: TVSettings = {
   city: 'Los Angeles',
   reduceMotion: false,
@@ -44,6 +54,7 @@ const DEFAULT_SETTINGS: TVSettings = {
   jellyfinUrl: '',
   selfMusicUrl: '',
   speakReplies: false,
+  wallpaper: 'main',
 };
 
 const FEATURED_APPS: TVApp[] = [
@@ -52,13 +63,6 @@ const FEATURED_APPS: TVApp[] = [
   { id: 'selfmusic', name: 'SelfMusic', subtitle: 'Музыка на твоих условиях', category: 'Музыка', symbol: 'SM', target: 'selfmusic' },
   { id: 'browser', name: 'Браузер', subtitle: 'Интернет и веб-приложения', category: 'Инструменты', symbol: 'WWW', target: 'browser' },
 ];
-
-const VIEW_LABELS: Record<View, string> = {
-  home: 'Главная',
-  apps: 'Приложения',
-  library: 'Медиатека',
-  settings: 'Настройки',
-};
 
 function readSettings(): TVSettings {
   try {
@@ -69,6 +73,9 @@ function readSettings(): TVSettings {
     const settings = { ...DEFAULT_SETTINGS, ...(parsed as Partial<TVSettings>) };
     if (typeof settings.aiEndpoint !== 'string' || !settings.aiEndpoint.trim()) {
       settings.aiEndpoint = DEFAULT_SETTINGS.aiEndpoint;
+    }
+    if (!WALLPAPERS.some((wallpaper) => wallpaper.id === settings.wallpaper)) {
+      settings.wallpaper = DEFAULT_SETTINGS.wallpaper;
     }
     return settings;
   } catch {
@@ -454,16 +461,18 @@ function App() {
   }, [notesVersion]);
 
   const shellClass = 'app-shell' + (settings.reduceMotion ? ' reduce-motion' : '') + (view === 'home' && compactHome ? ' catalog-mode' : '');
+  const activeWallpaper = WALLPAPERS.find((wallpaper) => wallpaper.id === settings.wallpaper) ?? WALLPAPERS[0];
   const displayedClock = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(now);
   const displayedDate = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
 
   return (
-    <div className={shellClass} style={{ '--glass-intensity': settings.glassIntensity / 100 } as CSSProperties}>
-      <div className="ambient ambient-one" aria-hidden="true" />
-      <div className="ambient ambient-two" aria-hidden="true" />
-      <div className="ambient ambient-three" aria-hidden="true" />
-
-      <div className={'dynamic-island' + (assistantOpen ? ' island-ai-active' : timer ? ' island-timer-active' : musicActivity ? ' island-music-active' : '')} role="status" aria-live="polite">
+    <div className={shellClass} style={{
+      '--glass-intensity': settings.glassIntensity / 100,
+      '--wallpaper-image': `url("${activeWallpaper.src}")`,
+      '--wallpaper-position': activeWallpaper.position,
+    } as CSSProperties}>
+      {(assistantOpen || timer || musicActivity) && (
+      <div className={'dynamic-island' + (assistantOpen ? ' island-ai-active' : timer ? ' island-timer-active' : ' island-music-active')} role="status" aria-live="polite">
         {assistantOpen ? (
           <div className="island-main">
             <span className="island-orb"><Sparkles size={17} /></span>
@@ -497,17 +506,13 @@ function App() {
         {timer && <button className="island-dismiss" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Отменить таймер"><X size={14} /></button>}
         {musicActivity && <button className="island-dismiss" data-tv-focus="true" onClick={() => setMusicActivity(false)} aria-label="Скрыть музыкальную активность"><X size={14} /></button>}
       </div>
+      )}
 
       <header className="topbar">
         <button className="brand" data-tv-focus="true" onClick={() => setView('home')} aria-label="B1O TV — главная">
           <span className="brand-mark">b1o</span>
-          <span className="brand-copy"><strong>B1O TV</strong><small>YOUR MEDIA SPACE</small></span>
+          <span className="brand-copy"><strong>B1O TV</strong></span>
         </button>
-        <div className="top-actions">
-          <button className="icon-button assistant-shortcut" data-tv-focus="true" onClick={openAssistant} aria-label="Открыть AI Assistant" title="AI Assistant"><Mic size={19} /></button>
-          <button className="icon-button" data-tv-focus="true" onClick={() => setView('library')} aria-label="Медиатека" title="Медиатека"><Library size={19} /></button>
-          <button className="icon-button" data-tv-focus="true" onClick={() => setView('settings')} aria-label="Настройки" title="Настройки"><Settings2 size={19} /></button>
-        </div>
       </header>
 
       <main className="main-content">
@@ -520,7 +525,7 @@ function App() {
                   <div className="date-line">{displayedDate}</div>
                 </div>
 
-                <aside className="weather-panel glass-panel" aria-label="Погода">
+                <aside className="weather-panel" aria-label="Погода">
                   <div className="weather-icon" aria-hidden="true">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>
                   <div className="weather-copy">
                     <strong>{weatherLoading ? '—' : weather ? Math.round(weather.temperatureF) + '°F' : '—'}</strong>
@@ -576,6 +581,28 @@ function App() {
         {view === 'settings' && (
           <section className="page-section settings-page">
             <div className="page-title-row"><div><span className="eyebrow small">ПОД ТЕБЯ</span><h1>Настройки среды</h1><p>Тема, погода, подключения и поведение оболочки.</p></div><span className="settings-saved"><Check size={15} /> Сохраняется автоматически</span></div>
+            <section className="wallpaper-library" aria-label="Обои">
+              <div className="wallpaper-library-heading">
+                <div><span className="eyebrow small">ФОН</span><h2>Обои</h2></div>
+                <span>{WALLPAPERS.length} изображений</span>
+              </div>
+              <div className="wallpaper-grid">
+                {WALLPAPERS.map((wallpaper) => (
+                  <button
+                    className={'wallpaper-choice' + (settings.wallpaper === wallpaper.id ? ' selected' : '')}
+                    key={wallpaper.id}
+                    data-tv-focus="true"
+                    aria-pressed={settings.wallpaper === wallpaper.id}
+                    aria-label={'Выбрать обои: ' + wallpaper.name}
+                    style={{ '--wallpaper-thumb': `url("${wallpaper.src}")` } as CSSProperties}
+                    onClick={() => updateSetting('wallpaper', wallpaper.id)}
+                  >
+                    <span className="wallpaper-choice-check" aria-hidden="true">{settings.wallpaper === wallpaper.id ? <Check size={17} /> : null}</span>
+                    <span className="wallpaper-choice-name">{wallpaper.name}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
             <div className="settings-grid">
               <section className="settings-card glass-panel"><div className="settings-card-head"><Cloud /><div><h2>Погода</h2><p>Выбери город для главного экрана.</p></div></div><label className="field-label">Город<input data-tv-focus="true" value={settings.city} onChange={(event) => updateSetting('city', event.target.value)} placeholder="Например, Burbank" /></label><p className="field-help">Текущая погода загружается через Open-Meteo. Геолокация автоматически не включается.</p></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Внешний вид</h2><p>Меньше шума, больше атмосферы.</p></div></div><label className="field-label">Интенсивность стекла <strong>{settings.glassIntensity}%</strong><input data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Уменьшить движение</strong><small>Отключает плавание фоновых слоёв.</small></span><input data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label></section>
@@ -587,7 +614,14 @@ function App() {
         )}
       </main>
 
-      <footer className="footer-bar"><span><span className="brand-mark footer-mark">b1o</span> <strong>B1O TV</strong> <span className="footer-separator">/</span> {VIEW_LABELS[view]}</span><span className="footer-right"><Wifi size={14} /> <span>Твоя среда, твои правила</span><button data-tv-focus="true" className="footer-settings" onClick={() => setView('settings')} aria-label="Настройки"><Settings2 size={15} /></button></span></footer>
+      <nav className="floating-dock" aria-label="Навигация B1O TV">
+        <button className={'dock-item' + (view === 'home' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'home' ? 'page' : undefined} onClick={() => setView('home')}><Home size={19} /><span>Главная</span></button>
+        <button className={'dock-item' + (view === 'apps' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'apps' ? 'page' : undefined} onClick={() => setView('apps')}><Grid2X2 size={19} /><span>Приложения</span></button>
+        <button className="dock-item" data-tv-focus="true" onClick={() => { setView('apps'); window.setTimeout(() => document.querySelector<HTMLInputElement>('[aria-label="Поиск приложений"]')?.focus(), 140); }}><Search size={19} /><span>Поиск</span></button>
+        <button className={'dock-item' + (view === 'library' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'library' ? 'page' : undefined} onClick={() => setView('library')}><Library size={19} /><span>Медиатека</span></button>
+        <button className="dock-item dock-assistant" data-tv-focus="true" onClick={openAssistant}><Mic size={19} /><span>Ассистент</span></button>
+        <button className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => setView('settings')}><Settings2 size={19} /><span>Настройки</span></button>
+      </nav>
 
       {assistantOpen && (
         <div className="assistant-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setAssistantOpen(false); }}>

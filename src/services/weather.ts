@@ -54,7 +54,7 @@ export async function fetchWeather(city: string, signal?: AbortSignal): Promise<
 
   return {
     city: place.name,
-    temperatureC: forecast.current.temperature_2m,
+    temperatureF: forecast.current.temperature_2m,
     code: forecast.current.weather_code,
     isDay: forecast.current.is_day === 1,
   };

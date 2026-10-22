@@ -60,7 +60,7 @@ button:not(:disabled) { cursor: pointer; }
 @keyframes drift-one { from { transform: translate3d(0, -1%, 0) scale(1); } to { transform: translate3d(-2%, 3%, 0) scale(1.06); } }
 @keyframes drift-two { from { transform: translate3d(0, 1%, 0) scale(1); } to { transform: translate3d(3%, -2%, 0) scale(1.08); } }
 .reduce-motion .ambient { animation: none !important; }
-.reduce-motion html { scroll-behavior: auto; }
+.reduce-motion { scroll-behavior: auto; }
 
 .topbar { position: relative; z-index: 4; display: flex; align-items: center; gap: 36px; min-height: 88px; padding: 0 clamp(28px, 5vw, 88px); border-bottom: 1px solid rgba(255,255,255,0.055); background: rgba(8,9,11,0.45); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
 .brand { display: inline-flex; flex-shrink: 0; gap: 11px; align-items: center; padding: 8px; border: 1px solid transparent; border-radius: 13px; background: transparent; text-align: left; }

@@ -30,7 +30,7 @@ export interface TVSettings {
 
 export interface WeatherSnapshot {
   city: string;
-  temperatureC: number;
+  temperatureF: number;
   code: number;
   isDay: boolean;
 }

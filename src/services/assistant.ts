@@ -116,7 +116,7 @@ export async function askConfiguredAssistant(endpoint: string, message: string):
   } catch {
     throw new Error('Адрес AI backend указан некорректно.');
   }
-  if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1'))) {
     throw new Error('Для AI backend используй HTTPS.');
   }
 

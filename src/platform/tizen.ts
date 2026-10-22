@@ -52,6 +52,28 @@ export function getInstalledApps(): Promise<InstalledTVApp[]> {
   });
 }
 
+
+export function launchInstalledAppById(
+  appId: string,
+  installedApps: InstalledTVApp[],
+): Promise<{ ok: boolean; message: string }> {
+  const app = installedApps.find((item) => item.id === appId);
+  const manager = window.tizen?.application;
+  if (!app) return Promise.resolve({ ok: false, message: 'Приложение больше не найдено в списке телевизора.' });
+  if (!manager?.launch) return Promise.resolve({ ok: false, message: 'Запуск приложений доступен только внутри Tizen TV.' });
+
+  return new Promise((resolve) => {
+    manager.launch(
+      app.id,
+      () => resolve({ ok: true, message: app.name + ' запущен.' }),
+      (error) => resolve({
+        ok: false,
+        message: 'Tizen не смог запустить приложение: ' + (error?.message || error?.name || 'неизвестная ошибка'),
+      }),
+    );
+  });
+}
+
 const appNameMatchers: Record<Exclude<AppTarget, 'assistant'>, RegExp> = {
   youtube: /youtube|you\s*tube|tizen\s*tube|tube for tizen/i,
   jellyfin: /jellyfin/i,

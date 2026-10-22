@@ -10,7 +10,7 @@ export default tseslint.config(
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2022,
-      globals: { ...globals.browser, ...globals.es2022 },
+      globals: { ...globals.browser, ...globals.es2021 },
     },
     plugins: { 'react-hooks': reactHooks },
     rules: {

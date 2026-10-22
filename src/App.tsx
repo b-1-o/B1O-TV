@@ -99,12 +99,6 @@ function readMusicActivity(): boolean {
   }
 }
 
-function greeting(hour: number): string {
-  if (hour < 12) return 'Доброе утро';
-  if (hour < 18) return 'Добрый день';
-  return 'Добрый вечер';
-}
-
 function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
   if (code === 0) return isDay ? <Sun /> : <Moon />;
   if (code === 45 || code === 48) return <CloudFog />;
@@ -470,36 +464,40 @@ function App() {
       <div className="ambient ambient-two" aria-hidden="true" />
       <div className="ambient ambient-three" aria-hidden="true" />
 
-      {(assistantOpen || timer || musicActivity) && (
-        <div className={'dynamic-island' + (assistantOpen ? ' island-ai-active' : timer ? ' island-timer-active' : ' island-music-active')} role="status" aria-live="polite">
-          {assistantOpen ? (
-            <div className="island-main">
-              <span className="island-orb"><Sparkles size={17} /></span>
-              <span className="island-copy"><strong>B1O Assistant</strong><small>{voiceListening ? 'Слушаю тебя…' : assistantBusy ? 'Думаю над ответом…' : 'Готов к диалогу'}</small></span>
-              {voiceListening && <span className="island-wave" aria-hidden="true"><i /><i /><i /><i /></span>}
-            </div>
-          ) : timer ? (
-            <div className="island-main">
-              <span className="island-orb timer-orb"><Timer size={17} /></span>
-              <span className="island-copy"><strong>Таймер</strong><small>{timer.label}</small></span>
-              <span className="island-countdown">{formatDuration(remainingMs)}</span>
-            </div>
-          ) : (
-            <button className="island-main island-music-main" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic">
-              <span className="island-orb music-orb"><Music2 size={17} /></span>
-              <span className="island-copy"><strong>SelfMusic</strong><small>Музыкальная сессия</small></span>
-              <Play size={15} />
-            </button>
-          )}
+      <div className={'dynamic-island' + (assistantOpen ? ' island-ai-active' : timer ? ' island-timer-active' : musicActivity ? ' island-music-active' : '')} role="status" aria-live="polite">
+        {assistantOpen ? (
+          <div className="island-main">
+            <span className="island-orb"><Sparkles size={17} /></span>
+            <span className="island-copy"><strong>B1O Assistant</strong><small>{voiceListening ? 'Слушаю тебя…' : assistantBusy ? 'Думаю над ответом…' : 'Готов к диалогу'}</small></span>
+            {voiceListening && <span className="island-wave" aria-hidden="true"><i /><i /><i /><i /></span>}
+          </div>
+        ) : timer ? (
+          <div className="island-main">
+            <span className="island-orb timer-orb"><Timer size={17} /></span>
+            <span className="island-copy"><strong>Таймер</strong><small>{timer.label}</small></span>
+            <span className="island-countdown">{formatDuration(remainingMs)}</span>
+          </div>
+        ) : musicActivity ? (
+          <button className="island-main island-music-main" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic">
+            <span className="island-orb music-orb"><Music2 size={17} /></span>
+            <span className="island-copy"><strong>SelfMusic</strong><small>Музыкальная сессия</small></span>
+            <Play size={15} />
+          </button>
+        ) : (
+          <button className="island-main island-idle-main" data-tv-focus="true" onClick={openAssistant} aria-label="Открыть B1O Assistant">
+            <span className="island-orb"><Sparkles size={17} /></span>
+            <span className="island-copy"><strong>B1O Assistant</strong><small>Готов к диалогу</small></span>
+            <Mic size={15} className="island-idle-mic" />
+          </button>
+        )}
 
-          {assistantOpen && timer && <span className="island-secondary"><Timer size={14} /><strong>{formatDuration(remainingMs)}</strong></span>}
-          {musicActivity && (assistantOpen || timer) && (
-            <button className="island-activity-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic"><Music2 size={15} /></button>
-          )}
-          {timer && <button className="island-dismiss" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Отменить таймер"><X size={14} /></button>}
-          {musicActivity && <button className="island-dismiss" data-tv-focus="true" onClick={() => setMusicActivity(false)} aria-label="Скрыть музыкальную активность"><X size={14} /></button>}
-        </div>
-      )}
+        {assistantOpen && timer && <span className="island-secondary"><Timer size={14} /><strong>{formatDuration(remainingMs)}</strong></span>}
+        {musicActivity && (assistantOpen || timer) && (
+          <button className="island-activity-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic"><Music2 size={15} /></button>
+        )}
+        {timer && <button className="island-dismiss" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Отменить таймер"><X size={14} /></button>}
+        {musicActivity && <button className="island-dismiss" data-tv-focus="true" onClick={() => setMusicActivity(false)} aria-label="Скрыть музыкальную активность"><X size={14} /></button>}
+      </div>
 
       <header className="topbar">
         <button className="brand" data-tv-focus="true" onClick={() => setView('home')} aria-label="B1O TV — главная">
@@ -519,39 +517,17 @@ function App() {
             <div className="home-stage">
               <section className="hero-section" aria-label="Главный экран">
                 <div className="home-clock-column">
-                  <div className="eyebrow"><span className="eyebrow-line" /> B1O · ТВОЯ СРЕДА</div>
-                  <div className="hero-greeting">{greeting(now.getHours())}</div>
-                  <div className="clock">{displayedClock}</div>
+                  <div className="clock" aria-label={'Сейчас ' + displayedClock}>{displayedClock}</div>
                   <div className="date-line">{displayedDate}</div>
-                  <div className="hero-bottom-line">
-                    <span>Спокойное пространство для твоего медиа.</span>
-                    <button className="scroll-to-media" data-tv-focus="true" onClick={() => {
-                        setCompactHome(true);
-                        window.setTimeout(() => document.getElementById('media-section')?.scrollIntoView({ behavior: settings.reduceMotion ? 'auto' : 'smooth', block: 'start' }), settings.reduceMotion ? 0 : 380);
-                      }}>
-                      Твоё медиа <ArrowDown size={15} />
-                    </button>
-                  </div>
                 </div>
 
                 <aside className="weather-panel glass-panel" aria-label="Погода">
-                  <div className="weather-topline">
-                    <span className="eyebrow small">ПОГОДА СЕЙЧАС</span>
-                    <button className="small-icon-button" data-tv-focus="true" onClick={() => setView('settings')} aria-label="Настроить погоду"><Settings2 size={15} /></button>
+                  <div className="weather-icon" aria-hidden="true">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>
+                  <div className="weather-copy">
+                    <strong>{weatherLoading ? '—' : weather ? Math.round(weather.temperatureF) + '°F' : '—'}</strong>
+                    <span>{weather ? describeWeather(weather.code) : weatherError ? 'Погода недоступна' : 'Загрузка…'}</span>
+                    <small>{weather?.city ?? settings.city}</small>
                   </div>
-                  <div className="weather-row">
-                    <div className="weather-icon">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>
-                    <div className="weather-copy">
-                      <strong>{weatherLoading ? '—' : weather ? Math.round(weather.temperatureF) + '°F' : '—'}</strong>
-                      <span>{weather ? describeWeather(weather.code) : weatherError || 'Погода загружается'}</span>
-                      <small>{weather?.city ?? settings.city}</small>
-                    </div>
-                  </div>
-                  <div className="weather-extra">
-                    <span className="weather-status"><i /> Текущая погода</span>
-                    <button className="weather-ai-link" data-tv-focus="true" onClick={openAssistant}><Mic size={14} /> Спросить AI</button>
-                  </div>
-                  {weatherError && <button className="weather-retry" data-tv-focus="true" onClick={() => setView('settings')}>Проверить город в настройках <ArrowRight size={13} /></button>}
                 </aside>
               </section>
             </div>

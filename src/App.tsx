@@ -30,6 +30,8 @@ import { createAssistantMessage, askConfiguredAssistant, formatDuration, parseLo
 import { describeWeather, fetchWeather } from './services/weather';
 import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, registerVoiceRemoteKey } from './platform/tizen';
 
+const LOGO_SRC = new URL('../assets/logo.jpg', import.meta.url).href;
+
 const SETTINGS_KEY = 'b1o-tv:settings';
 const TIMER_KEY = 'b1o-tv:timer';
 
@@ -619,7 +621,7 @@ function App() {
 
       <header className="topbar">
         <button className="brand" data-tv-focus="true" onClick={() => navigateToView('home')} aria-label="B1O TV — Home">
-          <span className="brand-mark">b1o</span>
+          <img className="brand-logo" src={LOGO_SRC} alt="" draggable={false} />
           <span className="brand-copy"><strong>B1O TV</strong></span>
         </button>
       </header>

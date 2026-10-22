@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FocusContext, doesFocusableExist, setFocus, useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import {
   ArrowRight,
@@ -32,7 +32,7 @@ import { describeWeather, fetchWeather } from './services/weather';
 import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
 import { CardGrid, FocusGroup } from './components/tv/CardGrid';
 import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
-import { AppSymbol, AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
+import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
 
 const LOGO_SRC = new URL('../assets/logo.jpg', import.meta.url).href;
 

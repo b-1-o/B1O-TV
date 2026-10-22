@@ -564,8 +564,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .library-art { min-height: 120px; }
   .library-art svg { width: 43px; height: 43px; }
   .library-card-copy { padding: 17px; }
-  .dynamic-island { left: auto; right: 10px; transform: none; }
-  @keyframes island-enter { from { opacity: 0; transform: translateY(-8px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .dynamic-island { left: 50%; right: auto; transform: translateX(-50%); }
+  @keyframes island-enter { from { opacity: 0; transform: translate(-50%, -8px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
   .island-main { min-width: auto; }
   .island-wave { display: none; }
 }

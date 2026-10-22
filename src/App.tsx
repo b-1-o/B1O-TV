@@ -140,7 +140,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const clock = window.setInterval(() => setNow(new Date()), 1_000);
+    const clock = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(clock);
   }, []);
 
@@ -211,7 +211,7 @@ function App() {
       }
     };
     update();
-    const interval = window.setInterval(update, 250);
+    const interval = window.setInterval(update, 1_000);
     return () => window.clearInterval(interval);
   }, [timer, notify]);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, parseLocalIntent } from './assistant';
+import { formatDuration, parseLocalIntent, resolveAssistantEndpoint } from './assistant';
 
 describe('parseLocalIntent', () => {
   it('parses a note command', () => {
@@ -39,5 +39,23 @@ describe('formatDuration', () => {
 
   it('formats hours', () => {
     expect(formatDuration(3_661_000)).toBe('1:01:01');
+  });
+});
+
+describe('resolveAssistantEndpoint', () => {
+  it('adds the assistant API path to a Worker origin', () => {
+    expect(resolveAssistantEndpoint('https://example.workers.dev').toString()).toBe('https://example.workers.dev/api/assistant');
+  });
+
+  it('keeps an already complete assistant endpoint', () => {
+    expect(resolveAssistantEndpoint('https://example.workers.dev/api/assistant').toString()).toBe('https://example.workers.dev/api/assistant');
+  });
+
+  it('removes trailing slashes before adding the API path', () => {
+    expect(resolveAssistantEndpoint('https://example.workers.dev/').toString()).toBe('https://example.workers.dev/api/assistant');
+  });
+
+  it('rejects insecure non-local endpoints', () => {
+    expect(() => resolveAssistantEndpoint('http://example.com')).toThrow('Для AI backend используй HTTPS.');
   });
 });

@@ -10,7 +10,6 @@ import {
   CloudSnow,
   Film,
   Grid2X2,
-  Home,
   Info,
   Library,
   LoaderCircle,
@@ -35,6 +34,7 @@ import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVServi
 
 const SETTINGS_KEY = 'b1o-tv:settings';
 const TIMER_KEY = 'b1o-tv:timer';
+const MUSIC_ACTIVITY_KEY = 'b1o-tv:music-activity';
 
 const DEFAULT_SETTINGS: TVSettings = {
   city: 'Los Angeles',
@@ -87,6 +87,14 @@ function readTimer(): ActiveTimer | null {
   }
 }
 
+function readMusicActivity(): boolean {
+  try {
+    return localStorage.getItem(MUSIC_ACTIVITY_KEY) === 'active';
+  } catch {
+    return false;
+  }
+}
+
 function greeting(hour: number): string {
   if (hour < 12) return 'Доброе утро';
   if (hour < 18) return 'Добрый день';
@@ -112,6 +120,8 @@ function AppSymbol({ app }: { app: TVApp }) {
 
 function App() {
   const [view, setView] = useState<View>('home');
+  const [compactHome, setCompactHome] = useState(false);
+  const [musicActivity, setMusicActivity] = useState(readMusicActivity);
   const [settings, setSettings] = useState<TVSettings>(readSettings);
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
@@ -143,6 +153,27 @@ function App() {
     const clock = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(clock);
   }, []);
+
+  useEffect(() => {
+    const onScroll = () => setCompactHome(window.scrollY > 120);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    setCompactHome(false);
+  }, [view]);
+
+  useEffect(() => {
+    try {
+      if (musicActivity) localStorage.setItem(MUSIC_ACTIVITY_KEY, 'active');
+      else localStorage.removeItem(MUSIC_ACTIVITY_KEY);
+    } catch {
+      // The activity indicator is optional if local storage is unavailable.
+    }
+  }, [musicActivity]);
 
   useEffect(() => {
     try {
@@ -297,16 +328,28 @@ function App() {
     window.setTimeout(() => document.querySelector<HTMLInputElement>('[data-assistant-input]')?.focus(), 60);
   };
 
-  const runApp = async (target: AppTarget) => {
+  const runApp = async (target: AppTarget): Promise<{ ok: boolean; message: string }> => {
     if (target === 'assistant') {
       openAssistant();
-      return;
+      return { ok: true, message: 'Ассистент открыт.' };
     }
+
+    if (target === 'selfmusic') {
+      setMusicActivity(true);
+      try { localStorage.setItem(MUSIC_ACTIVITY_KEY, 'active'); } catch { /* Storage is optional. */ }
+    }
+
     const result = await launchTVService(target, installedApps, {
       jellyfinUrl: settings.jellyfinUrl,
       selfMusicUrl: settings.selfMusicUrl,
     });
+
+    if (target === 'selfmusic' && !result.ok) {
+      setMusicActivity(false);
+      try { localStorage.removeItem(MUSIC_ACTIVITY_KEY); } catch { /* Storage is optional. */ }
+    }
     notify(result.message);
+    return result;
   };
 
   const submitAssistant = async (rawText?: string) => {
@@ -335,10 +378,7 @@ function App() {
       } else if (intent?.kind === 'time') {
         reply = 'Сейчас ' + new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date()) + '.';
       } else if (intent?.kind === 'launch') {
-        const result = await launchTVService(intent.target, installedApps, {
-          jellyfinUrl: settings.jellyfinUrl,
-          selfMusicUrl: settings.selfMusicUrl,
-        });
+        const result = await runApp(intent.target);
         reply = result.message;
       } else {
         reply = await askConfiguredAssistant(settings.aiEndpoint, text, messages.slice(-10), settings.aiToken);
@@ -416,7 +456,7 @@ function App() {
     return readSavedNotes();
   }, [notesVersion]);
 
-  const shellClass = 'app-shell' + (settings.reduceMotion ? ' reduce-motion' : '');
+  const shellClass = 'app-shell' + (settings.reduceMotion ? ' reduce-motion' : '') + (view === 'home' && compactHome ? ' catalog-mode' : '');
   const displayedClock = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(now);
   const displayedDate = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
 
@@ -426,62 +466,96 @@ function App() {
       <div className="ambient ambient-two" aria-hidden="true" />
       <div className="ambient ambient-three" aria-hidden="true" />
 
+      {(assistantOpen || timer || musicActivity) && (
+        <div className={'dynamic-island' + (assistantOpen ? ' island-ai-active' : timer ? ' island-timer-active' : ' island-music-active')} role="status" aria-live="polite">
+          {assistantOpen ? (
+            <div className="island-main">
+              <span className="island-orb"><Sparkles size={17} /></span>
+              <span className="island-copy"><strong>B1O Assistant</strong><small>{voiceListening ? 'Слушаю тебя…' : assistantBusy ? 'Думаю над ответом…' : 'Готов к диалогу'}</small></span>
+              {voiceListening && <span className="island-wave" aria-hidden="true"><i /><i /><i /><i /></span>}
+            </div>
+          ) : timer ? (
+            <div className="island-main">
+              <span className="island-orb timer-orb"><Timer size={17} /></span>
+              <span className="island-copy"><strong>Таймер</strong><small>{timer.label}</small></span>
+              <span className="island-countdown">{formatDuration(remainingMs)}</span>
+            </div>
+          ) : (
+            <button className="island-main island-music-main" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic">
+              <span className="island-orb music-orb"><Music2 size={17} /></span>
+              <span className="island-copy"><strong>SelfMusic</strong><small>Музыкальная сессия</small></span>
+              <Play size={15} />
+            </button>
+          )}
+
+          {assistantOpen && timer && <span className="island-secondary"><Timer size={14} /><strong>{formatDuration(remainingMs)}</strong></span>}
+          {musicActivity && (assistantOpen || timer) && (
+            <button className="island-activity-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic"><Music2 size={15} /></button>
+          )}
+          {timer && <button className="island-dismiss" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Отменить таймер"><X size={14} /></button>}
+          {musicActivity && <button className="island-dismiss" data-tv-focus="true" onClick={() => setMusicActivity(false)} aria-label="Скрыть музыкальную активность"><X size={14} /></button>}
+        </div>
+      )}
+
       <header className="topbar">
         <button className="brand" data-tv-focus="true" onClick={() => setView('home')} aria-label="B1O TV — главная">
           <span className="brand-mark">b1o</span>
-          <span className="brand-copy"><strong>B1O</strong><small>AMBIENT MEDIA</small></span>
+          <span className="brand-copy"><strong>B1O TV</strong><small>YOUR MEDIA SPACE</small></span>
         </button>
-        <nav className="main-nav" aria-label="Основная навигация">
-          <button className={'nav-item' + (view === 'home' ? ' active' : '')} data-tv-focus="true" onClick={() => setView('home')}><Home size={17} /> Главная</button>
-          <button className={'nav-item' + (view === 'apps' ? ' active' : '')} data-tv-focus="true" onClick={() => setView('apps')}><Grid2X2 size={17} /> Приложения</button>
-          <button className={'nav-item' + (view === 'library' ? ' active' : '')} data-tv-focus="true" onClick={() => setView('library')}><Library size={17} /> Медиатека</button>
-        </nav>
         <div className="top-actions">
-          <span className={'runtime-pill' + (isTizenRuntime() ? ' connected' : '')} title={isTizenRuntime() ? 'Tizen Web API обнаружен' : 'Работает в режиме веб-прототипа'}>
-            <span className="status-dot" />{isTizenRuntime() ? 'TIZEN' : 'PREVIEW'}
-          </span>
-          <button className="icon-button assistant-shortcut" data-tv-focus="true" onClick={openAssistant} aria-label="Открыть голосового ассистента"><Mic size={19} /></button>
-          <button className="icon-button" data-tv-focus="true" onClick={() => setView('settings')} aria-label="Настройки"><Settings2 size={19} /></button>
+          <button className="icon-button assistant-shortcut" data-tv-focus="true" onClick={openAssistant} aria-label="Открыть AI Assistant" title="AI Assistant"><Mic size={19} /></button>
+          <button className="icon-button" data-tv-focus="true" onClick={() => setView('library')} aria-label="Медиатека" title="Медиатека"><Library size={19} /></button>
+          <button className="icon-button" data-tv-focus="true" onClick={() => setView('settings')} aria-label="Настройки" title="Настройки"><Settings2 size={19} /></button>
         </div>
       </header>
 
       <main className="main-content">
         {view === 'home' && (
           <>
-            <section className="hero-section">
-              <div className="hero-copy">
-                <div className="eyebrow"><span className="eyebrow-line" /> ТВОЁ ПРОСТРАНСТВО</div>
-                <h1>{greeting(now.getHours())}<br /><span>Добро пожаловать домой.</span></h1>
-                <p className="hero-description">Фильмы, музыка и идеи — в одной спокойной среде.</p>
-                <div className="hero-actions">
-                  <button className="primary-button" data-tv-focus="true" onClick={() => setView('apps')}><Grid2X2 size={18} /> Открыть приложения <ArrowRight size={16} /></button>
-                  <button className="secondary-button" data-tv-focus="true" onClick={openAssistant}><Mic size={17} /> Поговорить с AI</button>
-                </div>
-              </div>
-
-              <div className="atmosphere-panel glass-panel">
-                <div className="panel-topline"><span>СЕЙЧАС</span><span className="live-indicator"><i /> LIVE</span></div>
-                <div className="clock">{displayedClock}</div>
-                <div className="date-line">{displayedDate}</div>
-                <div className="panel-divider" />
-                <div className="weather-row">
-                  <div className="weather-icon">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>
-                  <div className="weather-copy">
-                    <strong>{weatherLoading ? 'Загружаю погоду…' : weather ? Math.round(weather.temperatureF) + '°F' : '—'}</strong>
-                    <span>{weather ? describeWeather(weather.code) : weatherError || 'Погода недоступна'}</span>
-                    <small>{weather?.city ?? settings.city}</small>
+            <div className="home-stage">
+              <section className="hero-section" aria-label="Главный экран">
+                <div className="home-clock-column">
+                  <div className="eyebrow"><span className="eyebrow-line" /> B1O · ТВОЯ СРЕДА</div>
+                  <div className="hero-greeting">{greeting(now.getHours())}</div>
+                  <div className="clock">{displayedClock}</div>
+                  <div className="date-line">{displayedDate}</div>
+                  <div className="hero-bottom-line">
+                    <span>Спокойное пространство для твоего медиа.</span>
+                    <button className="scroll-to-media" data-tv-focus="true" onClick={() => {
+                        setCompactHome(true);
+                        window.setTimeout(() => document.getElementById('media-section')?.scrollIntoView({ behavior: settings.reduceMotion ? 'auto' : 'smooth', block: 'start' }), settings.reduceMotion ? 0 : 380);
+                      }}>
+                      Твоё медиа <ArrowDown size={15} />
+                    </button>
                   </div>
-                  <button className="small-icon-button" data-tv-focus="true" onClick={() => setView('settings')} aria-label="Настроить погоду"><Settings2 size={16} /></button>
                 </div>
-                {timer && <div className="timer-chip"><Timer size={16} /><span>{timer.label}</span><strong>{formatDuration(remainingMs)}</strong><button onClick={() => setTimer(null)} aria-label="Отменить таймер"><X size={14} /></button></div>}
-                {weatherError && <button className="text-action" data-tv-focus="true" onClick={() => setView('settings')}>Проверить город в настройках <ArrowRight size={14} /></button>}
-              </div>
-            </section>
 
-            <section className="section-block featured-section">
+                <aside className="weather-panel glass-panel" aria-label="Погода">
+                  <div className="weather-topline">
+                    <span className="eyebrow small">ПОГОДА СЕЙЧАС</span>
+                    <button className="small-icon-button" data-tv-focus="true" onClick={() => setView('settings')} aria-label="Настроить погоду"><Settings2 size={15} /></button>
+                  </div>
+                  <div className="weather-row">
+                    <div className="weather-icon">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>
+                    <div className="weather-copy">
+                      <strong>{weatherLoading ? '—' : weather ? Math.round(weather.temperatureF) + '°F' : '—'}</strong>
+                      <span>{weather ? describeWeather(weather.code) : weatherError || 'Погода загружается'}</span>
+                      <small>{weather?.city ?? settings.city}</small>
+                    </div>
+                  </div>
+                  <div className="weather-extra">
+                    <span className="weather-status"><i /> Текущая погода</span>
+                    <button className="weather-ai-link" data-tv-focus="true" onClick={openAssistant}><Mic size={14} /> Спросить AI</button>
+                  </div>
+                  {weatherError && <button className="weather-retry" data-tv-focus="true" onClick={() => setView('settings')}>Проверить город в настройках <ArrowRight size={13} /></button>}
+                </aside>
+              </section>
+            </div>
+
+            <section className="section-block featured-section media-catalog" id="media-section">
               <div className="section-heading">
-                <div><span className="eyebrow small">БЫСТРЫЙ ДОСТУП</span><h2>Твоё медиа</h2></div>
-                <button className="text-action" data-tv-focus="true" onClick={() => setView('apps')}>Вся библиотека <ArrowRight size={15} /></button>
+                <div><span className="eyebrow small">ТВОЯ БИБЛИОТЕКА</span><h2>Твоё медиа</h2></div>
+                <button className="text-action all-library-link" data-tv-focus="true" onClick={() => setView('apps')}>Вся библиотека <ArrowRight size={15} /></button>
               </div>
               <div className="featured-grid">
                 {FEATURED_APPS.slice(0, 3).map((app, index) => (
@@ -496,30 +570,6 @@ function App() {
                   <span className="app-symbol app-symbol-assistant"><Sparkles /></span>
                   <div className="featured-card-text"><strong>AI Assistant</strong><span>Ответы, таймеры и команды</span></div>
                 </button>
-              </div>
-            </section>
-
-            <section className="section-block utilities-section">
-              <div className="section-heading">
-                <div><span className="eyebrow small">МАЛЕНЬКИЕ ПОМОЩНИКИ</span><h2>Всё под рукой</h2></div>
-              </div>
-              <div className="utility-grid">
-                <button className="utility-card glass-panel" data-tv-focus="true" onClick={() => setView('library')}><BookOpen /><span><strong>Медиатека</strong><small>Фильмы и музыка</small></span><ArrowRight size={16} /></button>
-                <button className="utility-card glass-panel" data-tv-focus="true" onClick={openAssistant}><Timer /><span><strong>Таймер и заметки</strong><small>{timer ? 'Таймер ' + formatDuration(remainingMs) : notes.length + ' сохранённых заметок'}</small></span><ArrowRight size={16} /></button>
-                <button className="utility-card glass-panel" data-tv-focus="true" onClick={() => setView('settings')}><Settings2 /><span><strong>Настроить среду</strong><small>Вид, погода и сервисы</small></span><ArrowRight size={16} /></button>
-              </div>
-            </section>
-
-            <div className="scroll-hint"><ArrowDown size={15} /> Прокрути вниз, чтобы открыть каталог приложений</div>
-            <section className="section-block embedded-catalog" id="catalog-preview">
-              <div className="section-heading">
-                <div><span className="eyebrow small">БИБЛИОТЕКА</span><h2>Продолжить в приложении</h2></div>
-                <button className="text-action" data-tv-focus="true" onClick={() => setView('apps')}>Открыть каталог <ArrowRight size={15} /></button>
-              </div>
-              <div className="mini-app-row">
-                {FEATURED_APPS.map((app) => (
-                  <button className="mini-app glass-panel" data-tv-focus="true" key={app.id} onClick={() => void runApp(app.target)}><AppSymbol app={app} /><span><strong>{app.name}</strong><small>{app.category}</small></span></button>
-                ))}
               </div>
             </section>
           </>

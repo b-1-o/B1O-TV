@@ -891,9 +891,9 @@ body { background: #030509; color: #f3f6fb; }
   --glass-specular: rgba(255,255,255,.4);
   --glass-shadow: 0 14px 40px rgba(0,0,0,.24);
 }
-:where(.glass-panel, .featured-card, .catalog-card, .installed-row, .library-card,
+.glass-panel, .featured-card, .catalog-card, .installed-row, .library-card,
 .settings-card, .note-area, .empty-state, .search-box, .notice-card, .wallpaper-choice,
-.weather-panel) {
+.weather-panel {
   border: 1px solid var(--glass-edge);
   background:
     linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.018) 42%, rgba(255,255,255,.045)),
@@ -903,11 +903,13 @@ body { background: #030509; color: #f3f6fb; }
   backdrop-filter: blur(20px) saturate(180%);
 }
 .weather-panel {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  border-color: rgba(255,255,255,.16);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.012) 44%, rgba(255,255,255,.035)),
+    rgba(255,255,255,.025);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 12px 34px rgba(0,0,0,.18);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
 }
 .featured-card, .catalog-card, .installed-row, .settings-card, .library-card,
 .note-area, .empty-state, .search-box, .notice-card, .wallpaper-choice {
@@ -944,15 +946,15 @@ body { background: #030509; color: #f3f6fb; }
 .catalog-card > span:not(.app-symbol), .installed-row small { color: rgba(255,255,255,.68); }
 
 /* Inputs and action controls use the same neutral clear material, not tinted gradients. */
-:where(.primary-button, .secondary-button, .icon-button, .small-icon-button,
+.primary-button, .secondary-button, .icon-button, .small-icon-button,
 .voice-button, .test-voice-button, .assistant-form button, .island-activity-button,
-.island-dismiss, .wallpaper-choice-check) {
+.island-dismiss, .wallpaper-choice-check {
   border: 1px solid rgba(255,255,255,.24);
   color: #fff;
   background: rgba(255,255,255,.055);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 8px 24px rgba(0,0,0,.15);
 }
-:where(.primary-button, .secondary-button, .assistant-form button, .test-voice-button) {
+.primary-button, .secondary-button, .assistant-form button, .test-voice-button {
   border-radius: 9999px;
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);

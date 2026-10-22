@@ -6,8 +6,8 @@
   viewmodes="maximized">
   <name>B1O TV</name>
   <content src="index.html" />
-  <icon src="icon.svg" />
-  <description>B1O TV — dark ambient media environment</description>
+  <icon src="icon.png" />
+  <description>B1O TV — Liquid Glass media home for Samsung Smart TV.</description>
   <access origin="https://api.open-meteo.com" subdomains="true" />
   <access origin="https://geocoding-api.open-meteo.com" subdomains="true" />
   <access origin="https://b1o-tv-assistant.collab-docs-b1o.workers.dev" subdomains="true" />

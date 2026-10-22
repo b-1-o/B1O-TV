@@ -125,6 +125,13 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: JSON_HEADERS });
+    if (url.pathname === "/" && request.method === "GET") {
+      return json({
+        ok: true,
+        service: "B1O TV Assistant",
+        endpoints: { health: "/health", assistant: "/api/assistant" }
+      });
+    }
     if (url.pathname === "/health" && request.method === "GET") {
       return json({ ok: true, service: "B1O TV Assistant" });
     }

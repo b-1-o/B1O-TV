@@ -30,7 +30,7 @@ npm run build
 
 ## Этап 3 — AI backend
 
-Нужен HTTPS endpoint, принимающий POST JSON с полем message и возвращающий JSON с полем reply. API key модели хранится только на сервере/в секретах Worker.
+Исходник HTTPS endpoint находится в worker/. Он использует Workers AI binding, принимает POST JSON с message/history и возвращает JSON с reply. Перед использованием нужно задеплоить Worker и задать секрет ASSISTANT_TOKEN. Ключ модели остаётся на стороне Cloudflare.
 
 До подключения реального AI:
 - локальные команды продолжают работать без сети;

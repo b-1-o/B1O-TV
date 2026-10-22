@@ -111,7 +111,7 @@ export function launchInstalledAppById(
 }
 
 const appNameMatchers: Record<Exclude<AppTarget, 'assistant'>, RegExp> = {
-  youtube: /youtube|you\s*tube|tizen\s*tube|tube for tizen/i,
+  youtube: /youtube\s*for\s*tizen|tizen\s*tube|tube\s*for\s*tizen|tizen-youtube/i,
   jellyfin: /jellyfin/i,
   selfmusic: /self\s*music|selfmusic/i,
   browser: /internet|browser|браузер/i,

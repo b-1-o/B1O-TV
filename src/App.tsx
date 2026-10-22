@@ -48,7 +48,7 @@ const DEFAULT_SETTINGS: TVSettings = {
 };
 
 const FEATURED_APPS: TVApp[] = [
-  { id: 'youtube', name: 'YouTube', subtitle: 'Видео без лишнего шума', category: 'Видео', symbol: 'YT', target: 'youtube' },
+  { id: 'youtube', name: 'YouTube', subtitle: 'Клиент Tizen без рекламы', category: 'Видео', symbol: 'YT', target: 'youtube' },
   { id: 'jellyfin', name: 'Jellyfin', subtitle: 'Твоя домашняя библиотека', category: 'Кино и сериалы', symbol: 'JF', target: 'jellyfin' },
   { id: 'selfmusic', name: 'SelfMusic', subtitle: 'Музыка на твоих условиях', category: 'Музыка', symbol: 'SM', target: 'selfmusic' },
   { id: 'browser', name: 'Браузер', subtitle: 'Интернет и веб-приложения', category: 'Инструменты', symbol: 'WWW', target: 'browser' },

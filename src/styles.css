@@ -1028,3 +1028,262 @@ button:focus-visible, input:focus-visible, [data-tv-focus="true"]:focus {
     animation-duration: .01ms !important;
   }
 }
+
+
+/* B1O TV motion + shape pass. Keep all surfaces neutral; no colored overlays. */
+:root {
+  --tv-radius-card: 28px;
+  --tv-radius-control: 9999px;
+  --focus: #fff;
+}
+body, button, input, select {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+button, input, select, textarea {
+  transition:
+    background-color .24s ease,
+    border-color .24s ease,
+    color .24s ease,
+    box-shadow .28s ease,
+    transform .28s cubic-bezier(.2,.8,.2,1),
+    opacity .24s ease,
+    filter .28s ease;
+}
+select {
+  width: 100%;
+  min-width: 0;
+  height: 45px;
+  padding: 0 13px;
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 14px;
+  color: #fff;
+  background-color: rgba(255,255,255,.035);
+  font-size: 12px;
+}
+select option {
+  color: #111;
+  background: #fff;
+}
+/* Mouse clicks do not leave an ugly white ring; keyboard/remote focus stays accessible. */
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+[data-tv-focus="true"]:focus:not(:focus-visible) {
+  outline: none !important;
+}
+button:focus-visible, input:focus-visible, select:focus-visible,
+[data-tv-focus="true"]:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.9), 0 0 15px rgba(255,255,255,.28);
+}
+button:active { transform: scale(.975); }
+button:disabled { transform: none; }
+
+/* Full, rounded weather presentation: the card is legible from the sofa. */
+.weather-panel {
+  min-height: 142px;
+  padding: 24px 28px;
+  gap: 22px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 32px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.09), rgba(255,255,255,.025) 52%, rgba(255,255,255,.05)),
+    rgba(255,255,255,.035);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 16px 42px rgba(0,0,0,.24);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.weather-icon {
+  width: 64px;
+  height: 64px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 22px;
+  background: rgba(255,255,255,.055);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+.weather-copy { gap: 8px; }
+.weather-copy strong { font-size: clamp(46px, 4.4vw, 66px); font-weight: 260; letter-spacing: -.065em; }
+.weather-copy span { color: rgba(255,255,255,.88); font-size: 15px; }
+.weather-copy small { color: rgba(255,255,255,.62); font-size: 12px; }
+.catalog-mode .weather-panel {
+  min-height: 0;
+  padding: 8px 12px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.045);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+}
+.catalog-mode .weather-icon { width: 37px; height: 37px; border-radius: 13px; background: rgba(255,255,255,.055); }
+.catalog-mode .weather-copy strong { font-size: 21px; }
+.catalog-mode .weather-copy span { font-size: 10px; }
+
+/* True OLED Dynamic Island: solid black, no gradient or colored bloom. */
+.dynamic-island {
+  width: min(255px, calc(100vw - 36px));
+  min-height: 56px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 9999px;
+  color: #fff;
+  background: #000;
+  background-image: none;
+  box-shadow: 0 5px 22px rgba(0,0,0,.22);
+  transition:
+    width .48s cubic-bezier(.2,.82,.2,1),
+    min-height .42s cubic-bezier(.2,.82,.2,1),
+    padding .42s cubic-bezier(.2,.82,.2,1),
+    border-radius .42s cubic-bezier(.2,.82,.2,1),
+    opacity .2s ease,
+    transform .42s cubic-bezier(.2,.82,.2,1);
+  transform-origin: top center;
+}
+.dynamic-island.island-ai-active { width: min(371px, calc(100vw - 32px)); min-height: 58px; }
+.dynamic-island.island-timer-active { width: min(300px, calc(100vw - 32px)); min-height: 56px; }
+.dynamic-island.island-music-active { width: min(252px, calc(100vw - 32px)); min-height: 56px; }
+.dynamic-island .island-main,
+.dynamic-island .island-main:hover,
+.dynamic-island .island-main:active {
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  text-align: left;
+}
+.dynamic-island .island-main:focus:not(:focus-visible) { outline: none !important; }
+.dynamic-island .island-orb {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: #161616;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1);
+}
+.dynamic-island .island-copy { gap: 3px; flex: 1; min-width: 0; }
+.dynamic-island .island-copy strong { font-size: 13px; color: #fff; font-weight: 650; }
+.dynamic-island .island-copy small {
+  display: block;
+  max-width: 238px;
+  overflow: hidden;
+  color: rgba(255,255,255,.66);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dynamic-island .island-status-icon { flex: 0 0 auto; color: #fff; animation: assistant-breathe 1.8s ease-in-out infinite; }
+.dynamic-island .island-wave { gap: 3px; margin-left: auto; }
+.dynamic-island .island-wave i { width: 3px; min-height: 5px; background: #fff; animation: island-wave .58s ease-in-out infinite alternate; }
+.dynamic-island .island-wave i:nth-child(2) { animation-delay: .08s; }
+.dynamic-island .island-wave i:nth-child(3) { animation-delay: .16s; }
+.dynamic-island .island-wave i:nth-child(4) { animation-delay: .24s; }
+.dynamic-island.island-closing {
+  pointer-events: none;
+  animation: island-exit .22s cubic-bezier(.4,0,1,1) both;
+}
+@keyframes assistant-breathe {
+  0%,100% { opacity: .72; transform: scale(.94); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@keyframes island-exit {
+  from { opacity: 1; transform: translate(-50%,0) scale(1); }
+  to { opacity: 0; transform: translate(-50%,-7px) scale(.94); }
+}
+
+/* View changes have both an exit and an entrance; child content arrives in a soft stagger. */
+.main-content { transform-origin: 50% 20%; }
+.main-content.transition-enter { animation: screen-enter .44s cubic-bezier(.2,.8,.2,1) both; }
+.main-content.transition-exit { pointer-events: none; animation: screen-exit .17s cubic-bezier(.4,0,1,1) both; }
+@keyframes screen-enter {
+  from { opacity: 0; transform: translateY(12px) scale(.992); filter: blur(3px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes screen-exit {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  to { opacity: 0; transform: translateY(-7px) scale(.994); filter: blur(2px); }
+}
+.transition-enter .page-section,
+.transition-enter .home-stage,
+.transition-enter .featured-section,
+.transition-enter .wallpaper-library {
+  animation: content-arrive .46s cubic-bezier(.2,.8,.2,1) both;
+}
+.transition-enter .settings-card,
+.transition-enter .featured-card,
+.transition-enter .catalog-card,
+.transition-enter .library-card,
+.transition-enter .wallpaper-choice {
+  animation: item-arrive .46s cubic-bezier(.2,.8,.2,1) both;
+}
+.transition-enter .settings-card:nth-child(2),
+.transition-enter .featured-card:nth-child(2),
+.transition-enter .catalog-card:nth-child(2),
+.transition-enter .wallpaper-choice:nth-child(2) { animation-delay: 35ms; }
+.transition-enter .settings-card:nth-child(3),
+.transition-enter .featured-card:nth-child(3),
+.transition-enter .catalog-card:nth-child(3),
+.transition-enter .wallpaper-choice:nth-child(3) { animation-delay: 70ms; }
+.transition-enter .settings-card:nth-child(4),
+.transition-enter .featured-card:nth-child(4),
+.transition-enter .catalog-card:nth-child(4),
+.transition-enter .wallpaper-choice:nth-child(4) { animation-delay: 105ms; }
+@keyframes content-arrive {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes item-arrive {
+  from { opacity: 0; transform: translateY(13px) scale(.986); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Assistant panel animates out as well as in; voice starts in the Island, not in a chat. */
+.assistant-overlay.is-closing { animation: overlay-out .22s ease both; pointer-events: none; }
+.assistant-overlay.is-closing .assistant-panel { animation: island-collapse .22s cubic-bezier(.4,0,1,1) both; }
+@keyframes overlay-out { to { opacity: 0; } }
+@keyframes island-collapse {
+  from { opacity: 1; transform: translateY(0) scale(1); border-radius: 44px; }
+  to { opacity: 0; transform: translateY(-10px) scale(.92); border-radius: 9999px; }
+}
+.assistant-panel.glass-panel { border-radius: 32px; }
+.assistant-header .icon-button { border-radius: 9999px; }
+.assistant-input-area .voice-button,
+.assistant-form button { border-radius: 9999px; }
+.setup-transfer-card { grid-column: 1 / -1; }
+.setup-transfer-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 10px; }
+.setup-transfer-actions .primary-button,
+.setup-transfer-actions .secondary-button { min-height: 46px; padding-inline: 18px; }
+.visually-hidden {
+  position: absolute !important; width: 1px !important; height: 1px !important;
+  padding: 0 !important; margin: -1px !important; overflow: hidden !important;
+  clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important;
+}
+.topbar { animation: topbar-enter .6s cubic-bezier(.2,.8,.2,1) both; }
+.floating-dock { animation: dock-enter .62s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes topbar-enter { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes dock-enter { from { opacity: 0; transform: translate(-50%, 14px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@media (max-width: 760px) {
+  .weather-panel { min-height: 0; padding: 18px; gap: 14px; border-radius: 24px; }
+  .weather-icon { width: 48px; height: 48px; border-radius: 17px; }
+  .weather-icon svg { width: 28px; height: 28px; }
+  .weather-copy strong { font-size: clamp(38px, 10vw, 48px); }
+  .weather-copy span { font-size: 12px; }
+  .weather-copy small { font-size: 10px; }
+  .dynamic-island { top: 8px; border-radius: 9999px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-content.transition-enter, .main-content.transition-exit,
+  .transition-enter .page-section, .transition-enter .home-stage,
+  .transition-enter .featured-section, .transition-enter .wallpaper-library,
+  .transition-enter .settings-card, .transition-enter .featured-card,
+  .transition-enter .catalog-card, .transition-enter .library-card,
+  .transition-enter .wallpaper-choice, .topbar, .floating-dock,
+  .dynamic-island .island-status-icon {
+    animation: none !important;
+    filter: none !important;
+  }
+  .dynamic-island { transition-duration: .01ms !important; }
+}

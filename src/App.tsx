@@ -451,7 +451,7 @@ function App() {
       '--wallpaper-image': `url("${activeWallpaper.src}")`,
       '--wallpaper-position': activeWallpaper.position,
     } as CSSProperties}>
-      {(assistantOpen || timer || musicActivity) && (
+      {!assistantOpen && (timer || musicActivity) && (
       <div className={'dynamic-island' + (assistantOpen ? ' island-ai-active' : timer ? ' island-timer-active' : ' island-music-active')} role="status" aria-live="polite">
         {assistantOpen ? (
           <div className="island-main">
@@ -589,12 +589,11 @@ function App() {
       </main>
 
       <nav className="floating-dock" aria-label="Навигация B1O TV">
-        <button className={'dock-item' + (view === 'home' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'home' ? 'page' : undefined} onClick={() => setView('home')}><Home size={19} /><span>Главная</span></button>
         <button className={'dock-item' + (view === 'apps' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'apps' ? 'page' : undefined} onClick={() => setView('apps')}><Grid2X2 size={19} /><span>Приложения</span></button>
-        <button className="dock-item" data-tv-focus="true" onClick={() => { setView('apps'); window.setTimeout(() => document.querySelector<HTMLInputElement>('[aria-label="Поиск приложений"]')?.focus(), 140); }}><Search size={19} /><span>Поиск</span></button>
-        <button className={'dock-item' + (view === 'library' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'library' ? 'page' : undefined} onClick={() => setView('library')}><Library size={19} /><span>Медиатека</span></button>
-        <button className="dock-item dock-assistant" data-tv-focus="true" onClick={openAssistant}><Mic size={19} /><span>Ассистент</span></button>
+        <button className="dock-item" data-tv-focus="true" onClick={() => void runApp('jellyfin')}><Film size={19} /><span>Jellyfin</span></button>
+        <button className="dock-item" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Music2 size={19} /><span>SelfMusic</span></button>
         <button className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => setView('settings')}><Settings2 size={19} /><span>Настройки</span></button>
+        <button className="dock-item dock-assistant" data-tv-focus="true" onClick={openAssistant}><Mic size={19} /><span>Ассистент</span></button>
       </nav>
 
       {assistantOpen && (

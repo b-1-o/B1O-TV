@@ -485,17 +485,11 @@ function App() {
             <span className="island-copy"><strong>Таймер</strong><small>{timer.label}</small></span>
             <span className="island-countdown">{formatDuration(remainingMs)}</span>
           </div>
-        ) : musicActivity ? (
+        ) : (
           <button className="island-main island-music-main" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Вернуться в SelfMusic">
             <span className="island-orb music-orb"><Music2 size={17} /></span>
-            <span className="island-copy"><strong>SelfMusic</strong><small>Музыкальная сессия</small></span>
+            <span className="island-copy"><strong>SelfMusic</strong><small>Активная сессия</small></span>
             <Play size={15} />
-          </button>
-        ) : (
-          <button className="island-main island-idle-main" data-tv-focus="true" onClick={openAssistant} aria-label="Открыть B1O Assistant">
-            <span className="island-orb"><Sparkles size={17} /></span>
-            <span className="island-copy"><strong>B1O Assistant</strong><small>Готов к диалогу</small></span>
-            <Mic size={15} className="island-idle-mic" />
           </button>
         )}
 
@@ -605,7 +599,7 @@ function App() {
             </section>
             <div className="settings-grid">
               <section className="settings-card glass-panel"><div className="settings-card-head"><Cloud /><div><h2>Погода</h2><p>Выбери город для главного экрана.</p></div></div><label className="field-label">Город<input data-tv-focus="true" value={settings.city} onChange={(event) => updateSetting('city', event.target.value)} placeholder="Например, Burbank" /></label><p className="field-help">Текущая погода загружается через Open-Meteo. Геолокация автоматически не включается.</p></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Внешний вид</h2><p>Меньше шума, больше атмосферы.</p></div></div><label className="field-label">Интенсивность стекла <strong>{settings.glassIntensity}%</strong><input data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Уменьшить движение</strong><small>Отключает плавание фоновых слоёв.</small></span><input data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Внешний вид</h2><p>Обои и материал плавающей навигации.</p></div></div><label className="field-label">Выразительность Liquid Glass <strong>{settings.glassIntensity}%</strong><input data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Уменьшить движение</strong><small>Отключает плавание фоновых слоёв.</small></span><input data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Медиасервисы</h2><p>Адреса твоих собственных серверов.</p></div></div><label className="field-label">Jellyfin URL<input data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="https://jellyfin.example.com" /></label><label className="field-label">SelfMusic URL<input data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="https://music.example.com" /></label><p className="field-help">Ссылки сохраняются локально. При прямом открытии сайт должен разрешать доступ и поддерживать браузер телевизора.</p></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI и голос</h2><p>Подключай сервер, не API-ключ в приложении.</p></div></div><label className="field-label">AI backend endpoint<input data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Токен устройства<input data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Токен из Cloudflare Worker" /></label><p className="field-help">Это токен доступа к твоему Worker, не ключ модели. Он хранится локально. Endpoint принимает POST JSON с message/history и возвращает reply.</p><label className="check-row"><span><strong>Озвучивать ответы</strong><small>Зависит от поддержки Speech Synthesis в Tizen.</small></span><input data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><button className="secondary-button test-voice-button" data-tv-focus="true" onClick={openAssistant}><Mic size={17} /> Проверить ассистента <ArrowRight size={15} /></button></section>
             </div>

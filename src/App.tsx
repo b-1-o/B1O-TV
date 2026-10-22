@@ -130,9 +130,20 @@ function App() {
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState('');
   const toastTimer = useRef<number | undefined>(undefined);
+  const assistantCloseTimer = useRef<number | undefined>(undefined);
+  const assistantActivityTimer = useRef<number | undefined>(undefined);
+  const islandExitTimer = useRef<number | undefined>(undefined);
+  const viewExitTimer = useRef<number | undefined>(undefined);
+  const viewEnterTimer = useRef<number | undefined>(undefined);
+  const setupImportRef = useRef<HTMLInputElement | null>(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantClosing, setAssistantClosing] = useState(false);
   const [assistantBusy, setAssistantBusy] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
+  const [assistantActivityText, setAssistantActivityText] = useState('');
+  const [islandMounted, setIslandMounted] = useState(false);
+  const [islandClosing, setIslandClosing] = useState(false);
+  const [viewMotion, setViewMotion] = useState<'enter' | 'exit' | ''>('enter');
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<AssistantMessage[]>([
     createAssistantMessage('assistant', 'I’m B1O Assistant. I can answer questions, remember notes, set timers, and open installed apps. Speak or type in English or Russian.'),
@@ -141,6 +152,27 @@ function App() {
   const [remainingMs, setRemainingMs] = useState(0);
   const [notesVersion, setNotesVersion] = useState(0);
   const voiceStartRef = useRef<() => void>(() => undefined);
+
+  const navigateToView = useCallback((nextView: View) => {
+    if (nextView === view) return;
+    if (viewExitTimer.current !== undefined) window.clearTimeout(viewExitTimer.current);
+    if (viewEnterTimer.current !== undefined) window.clearTimeout(viewEnterTimer.current);
+    setViewMotion('exit');
+    viewExitTimer.current = window.setTimeout(() => {
+      setView(nextView);
+      setViewMotion('enter');
+      viewEnterTimer.current = window.setTimeout(() => setViewMotion(''), 430);
+    }, 170);
+  }, [view]);
+
+  const closeAssistant = useCallback(() => {
+    if (assistantCloseTimer.current !== undefined) window.clearTimeout(assistantCloseTimer.current);
+    setAssistantClosing(true);
+    assistantCloseTimer.current = window.setTimeout(() => {
+      setAssistantOpen(false);
+      setAssistantClosing(false);
+    }, 220);
+  }, []);
 
   const notify = useCallback((message: string) => {
     setToast(message);
@@ -169,7 +201,7 @@ function App() {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     } catch {
-      notify('Хранилище настроек недоступно в этом режиме.');
+      notify('Settings storage is unavailable in this mode.');
     }
   }, [settings, notify]);
 
@@ -184,7 +216,7 @@ function App() {
         if (active) setWeather(result);
       } catch (error) {
         if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
-        setWeatherError(error instanceof Error ? error.message : 'Погода недоступна.');
+        setWeatherError(error instanceof Error ? error.message : 'Weather is unavailable.');
       } finally {
         if (active) setWeatherLoading(false);
       }
@@ -207,7 +239,8 @@ function App() {
   }, []);
 
   useEffect(() => registerVoiceRemoteKey(() => {
-    setAssistantOpen(true);
+    setAssistantOpen(false);
+    setAssistantClosing(false);
     window.setTimeout(() => voiceStartRef.current(), 180);
   }), []);
 
@@ -226,7 +259,7 @@ function App() {
       const next = timer.endAt - Date.now();
       if (next <= 0) {
         setTimer(null);
-        notify('Таймер завершён: ' + timer.label);
+        notify('Timer finished: ' + timer.label);
       } else {
         setRemainingMs(next);
       }
@@ -243,12 +276,12 @@ function App() {
       if (event.key === 'Escape' || event.key === 'Backspace') {
         if (assistantOpen) {
           event.preventDefault();
-          setAssistantOpen(false);
+          closeAssistant();
           return;
         }
         if (view !== 'home') {
           event.preventDefault();
-          setView('home');
+          navigateToView('home');
           return;
         }
       }
@@ -256,12 +289,14 @@ function App() {
       const micKey = event.key === 'Microphone' || event.key === 'AudioInputMicrophone';
       if (micKey) {
         event.preventDefault();
-        setAssistantOpen(true);
+        setAssistantOpen(false);
+        setAssistantClosing(false);
         window.setTimeout(() => voiceStartRef.current(), 180);
         return;
       }
       if (event.altKey && event.key.toLocaleLowerCase() === 'v' && !isTyping) {
         event.preventDefault();
+        setAssistantClosing(false);
         setAssistantOpen(true);
         return;
       }
@@ -307,7 +342,7 @@ function App() {
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [assistantOpen, view, settings.reduceMotion]);
+  }, [assistantOpen, view, settings.reduceMotion, closeAssistant, navigateToView]);
 
   const updateSetting = <K extends keyof TVSettings>(key: K, value: TVSettings[K]) => {
     setSettings((previous) => ({ ...previous, [key]: value }));

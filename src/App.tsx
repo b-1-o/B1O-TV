@@ -31,7 +31,7 @@ import {
 import type { ActiveTimer, AppTarget, AssistantMessage, InstalledTVApp, TVApp, TVSettings, View, WeatherSnapshot } from './types';
 import { createAssistantMessage, askConfiguredAssistant, formatDuration, parseLocalIntent, readSavedNotes, saveNote } from './services/assistant';
 import { describeWeather, fetchWeather } from './services/weather';
-import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService } from './platform/tizen';
+import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, registerVoiceRemoteKey } from './platform/tizen';
 
 const SETTINGS_KEY = 'b1o-tv:settings';
 const TIMER_KEY = 'b1o-tv:timer';
@@ -130,6 +130,7 @@ function App() {
   const [timer, setTimer] = useState<ActiveTimer | null>(readTimer);
   const [remainingMs, setRemainingMs] = useState(0);
   const [notesVersion, setNotesVersion] = useState(0);
+  const voiceStartRef = useRef<() => void>(() => undefined);
 
   const notify = useCallback((message: string) => {
     setToast(message);
@@ -183,6 +184,11 @@ function App() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => registerVoiceRemoteKey(() => {
+    setAssistantOpen(true);
+    window.setTimeout(() => voiceStartRef.current(), 180);
+  }), []);
+
   useEffect(() => {
     try {
       if (timer) localStorage.setItem(TIMER_KEY, JSON.stringify(timer));
@@ -226,7 +232,13 @@ function App() {
       }
 
       const micKey = event.key === 'Microphone' || event.key === 'AudioInputMicrophone';
-      if (micKey || (event.altKey && event.key.toLocaleLowerCase() === 'v' && !isTyping)) {
+      if (micKey) {
+        event.preventDefault();
+        setAssistantOpen(true);
+        window.setTimeout(() => voiceStartRef.current(), 180);
+        return;
+      }
+      if (event.altKey && event.key.toLocaleLowerCase() === 'v' && !isTyping) {
         event.preventDefault();
         setAssistantOpen(true);
         return;
@@ -388,6 +400,8 @@ function App() {
       notify('Не удалось запустить распознавание речи в этой среде.');
     }
   };
+
+  voiceStartRef.current = startVoiceInput;
 
   const filteredApps = useMemo(() => {
     const value = search.trim().toLocaleLowerCase('ru-RU');

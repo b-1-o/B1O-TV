@@ -40,7 +40,7 @@ export function parseLocalIntent(raw: string): LocalIntent | null {
       : /^(?:минут|мин)/.test(unit)
         ? 60_000
         : 3_600_000;
-    if (Number.isFinite(amount) && amount > 0 && amount <= 24 * 60) {
+    if (Number.isFinite(amount) && amount > 0 && amount * multiplier <= 24 * 60 * 60 * 1_000) {
       return { kind: 'timer', durationMs: amount * multiplier };
     }
   }

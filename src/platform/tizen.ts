@@ -7,6 +7,17 @@ interface TizenApplicationInfo {
   version?: string;
 }
 
+interface TizenInputDeviceKey {
+  name: string;
+  code: number;
+}
+
+interface TizenInputDeviceManager {
+  getSupportedKeys(): TizenInputDeviceKey[];
+  registerKey(keyName: string): void;
+  unregisterKey?(keyName: string): void;
+}
+
 interface TizenApplicationManager {
   getAppsInfo(
     success: (apps: TizenApplicationInfo[]) => void,
@@ -22,6 +33,31 @@ interface TizenApplicationManager {
 declare global {
   interface Window {
     tizen?: { application?: TizenApplicationManager };
+  }
+}
+
+export function registerVoiceRemoteKey(onVoice: () => void): () => void {
+  const input = window.tizen?.tvinputdevice;
+  if (!input?.getSupportedKeys || !input.registerKey) return () => undefined;
+
+  try {
+    const voiceKey = input.getSupportedKeys().find((key) => /voice|microphone|mic/i.test(key.name));
+    if (!voiceKey) return () => undefined;
+    input.registerKey(voiceKey.name);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLocaleLowerCase() !== voiceKey.name.toLocaleLowerCase() && event.keyCode !== voiceKey.code) return;
+      event.preventDefault();
+      onVoice();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      try { input.unregisterKey?.(voiceKey.name); } catch { /* Key may be reserved by the TV firmware. */ }
+    };
+  } catch {
+    // Some firmware reserves the microphone key or does not expose the input-device API.
+    return () => undefined;
   }
 }
 

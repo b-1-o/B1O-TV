@@ -35,7 +35,7 @@ import { CardGrid, FocusGroup } from './components/tv/CardGrid';
 import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
 import { useTheme } from './contexts/ThemeContext';
 import { DEFAULT_CONFIG } from './defaultConfig';
-import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
+import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, HomeInstalledAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
 
 const LOGO_SRC = new URL('../assets/logo.jpg', import.meta.url).href;
 
@@ -744,6 +744,10 @@ function App() {
     return readSavedNotes();
   }, [notesVersion]);
 
+  const homeInstalledApps = useMemo(() => installedApps
+    .filter((app) => app.id !== 'B1Otv00001.B1web' && app.name.toLocaleLowerCase() !== 'b1o tv')
+    .slice(0, 8), [installedApps]);
+
   const shouldShowIsland = !assistantOpen && (
     voiceListening || assistantBusy || Boolean(assistantActivityText) || Boolean(timer) || musicActivity
   );
@@ -837,6 +841,20 @@ function App() {
                 </TVButton>
               </section>
             </div>
+
+            {homeInstalledApps.length > 0 && (
+              <section className="section-block home-installed-section" aria-label="Installed TV apps">
+                <div className="section-heading">
+                  <div><span className="eyebrow small">READY TO LAUNCH</span><h2>On This TV</h2></div>
+                  <TVButton className="text-action all-library-link" data-tv-focus="true" onClick={() => navigateToView('apps')}>All Apps <ArrowRight size={15} /></TVButton>
+                </div>
+                <CardGrid focusKey="HOME-INSTALLED-GRID" className="home-installed-apps">
+                  {homeInstalledApps.map((app) => (
+                    <HomeInstalledAppCard key={app.id} app={app} onSelect={launchInstalledApp} />
+                  ))}
+                </CardGrid>
+              </section>
+            )}
 
             <section className="section-block featured-section media-catalog" id="media-section">
               <div className="section-heading">

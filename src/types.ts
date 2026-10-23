@@ -1,4 +1,4 @@
-export type View = 'home' | 'apps' | 'library' | 'settings';
+export type View = 'home' | 'apps' | 'library' | 'settings' | 'selfmusic';
 
 export type AppTarget = 'youtube' | 'jellyfin' | 'selfmusic' | 'browser' | 'assistant';
 

@@ -30,13 +30,97 @@ interface TizenApplicationManager {
   ): void;
 }
 
+type SamsungVoiceState = 'None' | 'Home' | 'List' | 'Player' | 'Setting' | 'Search' | 'Unknown';
+interface SamsungVoiceContext { positionX: number; positionY: number; title: string; aliasArr: string[]; bFocused: boolean; }
+interface SamsungVoiceManager {
+  setCallback(callback: {
+    onupdatestate?: () => SamsungVoiceState;
+    onnavigation?: (navigation: string) => boolean;
+    onselection?: (selection: number) => boolean;
+    onchangeappstate?: (state: SamsungVoiceState) => boolean;
+    ontitleselection?: (title: string) => boolean;
+    onrequestcontentcontext?: () => string;
+  }): void;
+  listen(): void;
+  buildVoiceInteractionContentContextItem?(x: number, y: number, title: string, aliases: string[], focused: boolean): SamsungVoiceContext;
+  buildVoiceInteractionContentContextResponse?(contexts: SamsungVoiceContext[]): string;
+}
 declare global {
   interface Window {
     tizen?: {
       application?: TizenApplicationManager;
       tvinputdevice?: TizenInputDeviceManager;
     };
+    webapis?: { voiceinteraction?: SamsungVoiceManager };
   }
+}
+
+
+let samsungVoiceReady = false;
+
+/** Samsung Voice Interaction supports app navigation and selection; it is not a dictation API. */
+export function registerSamsungVoiceInteraction(handlers: {
+  getState: () => SamsungVoiceState;
+  onNavigate: (navigation: string) => boolean;
+  onSelect: (selection: number) => boolean;
+  onAppState: (state: SamsungVoiceState) => boolean;
+}): () => void {
+  const manager = window.webapis?.voiceinteraction;
+  samsungVoiceReady = false;
+  if (!manager?.setCallback || !manager.listen) return () => undefined;
+  try {
+    manager.setCallback({
+      onupdatestate: handlers.getState,
+      onnavigation: handlers.onNavigate,
+      onselection: handlers.onSelect,
+      onchangeappstate: handlers.onAppState,
+      onrequestcontentcontext: () => {
+        try {
+          const items = Array.from(document.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
+            .filter((el) => {
+              if ('disabled' in el && Boolean((el as HTMLButtonElement).disabled)) return false;
+              const style = getComputedStyle(el);
+              return style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length > 0;
+            })
+            .map((el) => {
+              const rect = el.getBoundingClientRect();
+              const title = (el.getAttribute('aria-label') || el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+              return manager.buildVoiceInteractionContentContextItem
+                ? manager.buildVoiceInteractionContentContextItem(Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2), title, [], el.dataset.tvFocused === 'true')
+                : { positionX: Math.round(rect.left + rect.width / 2), positionY: Math.round(rect.top + rect.height / 2), title, aliasArr: [], bFocused: el.dataset.tvFocused === 'true' };
+            }).filter((item) => item.title);
+          return manager.buildVoiceInteractionContentContextResponse
+            ? manager.buildVoiceInteractionContentContextResponse(items)
+            : JSON.stringify(items);
+        } catch { return '[]'; }
+      },
+      ontitleselection: (requested) => {
+        const normalize = (value: string) => value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+        const wanted = normalize(requested);
+        if (!wanted) return false;
+        const visible = Array.from(document.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
+          .filter((el) => !('disabled' in el && Boolean((el as HTMLButtonElement).disabled)) && el.getClientRects().length > 0);
+        const label = (el: HTMLElement) => normalize(el.getAttribute('aria-label') || el.innerText || el.textContent || '');
+        const exact = visible.find((el) => label(el) === wanted);
+        const candidates = visible.filter((el) => label(el) && (label(el).includes(wanted) || wanted.includes(label(el))));
+        const target = exact || (candidates.length === 1 ? candidates[0] : undefined);
+        if (!target) return false;
+        target.click();
+        return true;
+      },
+    });
+    samsungVoiceReady = true;
+  } catch {
+    samsungVoiceReady = false;
+    return () => undefined;
+  }
+  return () => { samsungVoiceReady = false; };
+}
+
+export function listenSamsungVoiceInteraction(): { ok: boolean } {
+  const manager = window.webapis?.voiceinteraction;
+  if (!samsungVoiceReady || !manager?.listen) return { ok: false };
+  try { manager.listen(); return { ok: true }; } catch { return { ok: false }; }
 }
 
 const SPATIAL_REMOTE_KEY_CODES = new Set([13, 37, 38, 39, 40]);
@@ -148,7 +232,7 @@ export function launchInstalledAppById(
 }
 
 const appNameMatchers: Record<Exclude<AppTarget, 'assistant'>, RegExp> = {
-  youtube: /youtube\s*for\s*tizen|tizen\s*tube|tube\s*for\s*tizen|tizen-youtube/i,
+  youtube: /youtube\s*for\s*tizen|tizen\s*tube|tube\s*for\s*tizen|tizen-youtube|tUb3Xq7Lm9/i,
   jellyfin: /jellyfin/i,
   selfmusic: /self\s*music|selfmusic/i,
   browser: /internet|browser|браузер/i,
@@ -201,16 +285,43 @@ export async function launchTVService(
   return { ok: false, message: 'Could not find installed ' + names[target] + '. Check the app library.' };
 }
 
-function openConfiguredUrl(rawUrl: string, serviceName: string): { ok: boolean; message: string } {
+function isPrivateIpv4(hostname: string): boolean {
+  const parts = hostname.split('.');
+  if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part))) return false;
+  const octets = parts.map(Number);
+  if (octets.some((part) => part < 0 || part > 255)) return false;
+  const [first, second] = octets;
+  return first === 10 || first === 127 || (first === 192 && second === 168)
+    || (first === 172 && second >= 16 && second <= 31)
+    || (first === 169 && second === 254) || (first === 100 && second >= 64 && second <= 127);
+}
+
+export function isAllowedServiceUrl(rawUrl: string): boolean {
   try {
     const url = new URL(rawUrl.trim());
-    if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
-      return { ok: false, message: 'For ' + serviceName + ' requires an HTTPS URL (or a local development URL).' };
-    }
-    const opened = window.open(url.toString(), '_blank', 'noopener,noreferrer');
-    if (!opened) return { ok: false, message: 'The TV blocked the new window. Install the app client or check the link settings.' };
-    return { ok: true, message: serviceName + ' opened.' };
-  } catch {
+    if (url.username || url.password) return false;
+    if (url.protocol === 'https:') return true;
+    if (url.protocol !== 'http:') return false;
+    const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    return host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')
+      || host === '::1' || host.startsWith('fc') || host.startsWith('fd')
+      || host.startsWith('fe80:') || isPrivateIpv4(host);
+  } catch { return false; }
+}
+
+function openConfiguredUrl(rawUrl: string, serviceName: string): { ok: boolean; message: string } {
+  let url: URL;
+  try { url = new URL(rawUrl.trim()); } catch {
     return { ok: false, message: 'The URL for ' + serviceName + ' is invalid.' };
   }
+  if (!isAllowedServiceUrl(url.toString())) {
+    return { ok: false, message: 'Use HTTPS for public servers. HTTP is allowed only for localhost/private LAN/Tailscale addresses.' };
+  }
+  const opened = window.open(url.toString(), '_blank');
+  if (opened) {
+    try { opened.opener = null; } catch { /* Some TV WebViews expose a read-only opener. */ }
+    return { ok: true, message: serviceName + ' opened.' };
+  }
+  window.location.assign(url.toString());
+  return { ok: true, message: serviceName + ' is opening. Press Back to return to B1O TV.' };
 }

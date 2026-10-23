@@ -286,6 +286,9 @@ export function SelfMusicPanel({
       setPlaylistActionKey('');
       setImageTickets({});
       setProfileName('');
+      setStreamUrl('');
+      setCurrentTrackId('');
+      setIsPlaying(false);
       return;
     }
     void loadLibrary(accessToken);

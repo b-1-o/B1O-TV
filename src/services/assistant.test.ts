@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, parseLocalIntent, resolveAssistantEndpoint } from './assistant';
+import { formatDuration, parseLocalIntent, resolveAssistantEndpoint, resolveTranscriptionEndpoint } from './assistant';
 
 describe('parseLocalIntent', () => {
   it('parses a note command', () => {
@@ -57,5 +57,15 @@ describe('resolveAssistantEndpoint', () => {
 
   it('rejects insecure non-local endpoints', () => {
     expect(() => resolveAssistantEndpoint('http://example.com')).toThrow('Use HTTPS for the AI backend.');
+  });
+
+  it('resolves the protected speech endpoint from a worker origin', () => {
+    expect(resolveTranscriptionEndpoint('https://example.workers.dev').toString())
+      .toBe('https://example.workers.dev/api/transcribe');
+  });
+
+  it('replaces the assistant API path with the transcription path', () => {
+    expect(resolveTranscriptionEndpoint('https://example.workers.dev/api/assistant').toString())
+      .toBe('https://example.workers.dev/api/transcribe');
   });
 });

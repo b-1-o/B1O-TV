@@ -641,6 +641,7 @@ export function SelfMusicPanel({
             <div className="selfmusic-form-heading"><span className="eyebrow small">YOUR PRIVATE LIBRARY</span><h2>Connect SelfMusic</h2><p>Sign in with the same account you use for your music server.</p></div>
             <label className="selfmusic-field-label">SelfMusic server URL
               <TVInput focusKey="SELFMUSIC-SERVER-URL" data-tv-focus="true" type="url" value={baseUrl} onChange={(event) => onServerUrlChange(event.target.value)} placeholder="http://192.168.1.10:8787" autoComplete="url" />
+              <span>On this PC, localhost:8787 is fine. On the TV, use the music server computer’s LAN IP or a private HTTPS/Tailscale URL — localhost points to the TV itself.</span>
             </label>
             <label className="selfmusic-field-label">Username <span>Optional for the shared owner password</span>
               <TVInput focusKey="SELFMUSIC-USERNAME" data-tv-focus="true" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Your SelfMusic username" autoComplete="username" />

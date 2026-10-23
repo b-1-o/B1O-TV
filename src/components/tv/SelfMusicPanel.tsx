@@ -141,6 +141,8 @@ export function SelfMusicPanel({
   const [tracks, setTracks] = useState<SelfMusicTrack[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [playlists, setPlaylists] = useState<SelfMusicPlaylist[]>([]);
+  const [activePlaylistId, setActivePlaylistId] = useState('');
+  const [playlistTrackIds, setPlaylistTrackIds] = useState<string[]>([]);
   const [scope, setScope] = useState<'library' | 'favorites'>('library');
   const [query, setQuery] = useState('');
   const [currentTrackId, setCurrentTrackId] = useState('');
@@ -160,12 +162,15 @@ export function SelfMusicPanel({
 
   const visibleTracks = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-    return tracks.filter((track) => {
+    const sourceTracks = activePlaylistId
+      ? playlistTrackIds.map((id) => tracks.find((track) => track.id === id)).filter((track): track is SelfMusicTrack => Boolean(track))
+      : tracks;
+    return sourceTracks.filter((track) => {
       if (scope === 'favorites' && !favoriteIds.includes(track.id)) return false;
       if (!normalizedQuery) return true;
       return [track.title, track.artist, track.album, track.genre].some((value) => value.toLocaleLowerCase().includes(normalizedQuery));
     });
-  }, [tracks, favoriteIds, query, scope]);
+  }, [tracks, favoriteIds, query, scope, activePlaylistId, playlistTrackIds]);
 
   const friendlyNetworkError = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : 'Could not connect to SelfMusic.';
@@ -260,6 +265,8 @@ export function SelfMusicPanel({
       setTracks([]);
       setFavoriteIds([]);
       setPlaylists([]);
+      setActivePlaylistId('');
+      setPlaylistTrackIds([]);
       setImageTickets({});
       setProfileName('');
       return;
@@ -359,6 +366,34 @@ export function SelfMusicPanel({
     }
   };
 
+  const openPlaylist = useCallback(async (playlist: SelfMusicPlaylist) => {
+    if (!accessToken || !normalizedUrl) return;
+    setLoadError('');
+    setStatusMessage('');
+    try {
+      const body = asRecord(await apiRequest<unknown>(
+        normalizedUrl,
+        '/api/playlists/' + encodeURIComponent(playlist.id),
+        accessToken,
+      ));
+      const record = asRecord(body?.playlist);
+      const list = Array.isArray(record?.tracks) ? record.tracks : [];
+      const ids = list.flatMap((value) => {
+        const track = asRecord(value);
+        return typeof track?.id === 'string' ? [track.id] : [];
+      });
+      setActivePlaylistId(playlist.id);
+      setPlaylistTrackIds(ids);
+      setScope('library');
+      setStatusMessage('Playlist · ' + playlist.name + ' · ' + ids.length + ' tracks');
+    } catch (error) {
+      setLoadError(friendlyNetworkError(error));
+      if (error instanceof Error && /session expired|unauthorized/i.test(error.message.toLowerCase())) {
+        onAccessTokenChange('');
+      }
+    }
+  }, [accessToken, normalizedUrl, friendlyNetworkError, onAccessTokenChange]);
+
   const createMediaTicket = useCallback(async (purpose: 'stream' | 'artwork', trackId: string) => {
     if (!accessToken || !normalizedUrl) throw new Error('Sign in to SelfMusic first.');
     const body = await apiRequest<unknown>(normalizedUrl, '/api/embed/media-tickets', accessToken, {
@@ -378,7 +413,11 @@ export function SelfMusicPanel({
     setStatusMessage('');
     setIsPlaying(false);
     try {
-      const ticket = await createMediaTicket('stream', track.id);
+      const [ticket, artTicket] = await Promise.all([
+        createMediaTicket('stream', track.id),
+        createMediaTicket('artwork', track.id),
+      ]);
+      setImageTickets((previous) => ({ ...previous, [track.id]: artTicket }));
       setCurrentTrackId(track.id);
       setStreamUrl(normalizedUrl + '/api/stream/' + encodeURIComponent(track.id) + '?ticket=' + encodeURIComponent(ticket));
       setDuration(track.duration);
@@ -472,6 +511,8 @@ export function SelfMusicPanel({
     setTracks([]);
     setFavoriteIds([]);
     setPlaylists([]);
+    setActivePlaylistId('');
+    setPlaylistTrackIds([]);
     setImageTickets({});
     setPassword('');
     setProfileName('');
@@ -579,15 +620,15 @@ export function SelfMusicPanel({
 
             <section className="selfmusic-library glass-panel">
               <header className="selfmusic-library-header">
-                <div><span className="eyebrow small">YOUR COLLECTION</span><h2>Music library <span>{visibleTracks.length.toLocaleString()}</span></h2></div>
+                <div><span className="eyebrow small">YOUR COLLECTION</span><h2>{activePlaylistId ? (playlists.find((playlist) => playlist.id === activePlaylistId)?.name || 'Playlist') : scope === 'favorites' ? 'Favorites' : 'Music library'} <span>{visibleTracks.length.toLocaleString()}</span></h2></div>
                 <label className="selfmusic-search"><Search size={17} /><TVInput focusKey="SELFMUSIC-SEARCH" data-tv-focus="true" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tracks, artists…" aria-label="Search SelfMusic library" /></label>
               </header>
               <div className="selfmusic-library-tabs">
-                <TVButton focusKey="SELFMUSIC-TAB-LIBRARY" className={'selfmusic-filter-tab' + (scope === 'library' ? ' is-active' : '')} data-tv-focus="true" onClick={() => setScope('library')}><Library size={15} /> All tracks</TVButton>
-                <TVButton focusKey="SELFMUSIC-TAB-FAVORITES" className={'selfmusic-filter-tab' + (scope === 'favorites' ? ' is-active' : '')} data-tv-focus="true" onClick={() => setScope('favorites')}><Heart size={15} /> Favorites <span>{favoriteIds.length}</span></TVButton>
+                <TVButton focusKey="SELFMUSIC-TAB-LIBRARY" className={'selfmusic-filter-tab' + (scope === 'library' && !activePlaylistId ? ' is-active' : '')} data-tv-focus="true" onClick={() => { setScope('library'); setActivePlaylistId(''); setPlaylistTrackIds([]); }}><Library size={15} /> All tracks</TVButton>
+                <TVButton focusKey="SELFMUSIC-TAB-FAVORITES" className={'selfmusic-filter-tab' + (scope === 'favorites' ? ' is-active' : '')} data-tv-focus="true" onClick={() => { setScope('favorites'); setActivePlaylistId(''); setPlaylistTrackIds([]); }}><Heart size={15} /> Favorites <span>{favoriteIds.length}</span></TVButton>
                 <span className="selfmusic-playlist-count"><ListMusic size={15} /> {playlists.length} playlists</span>
               </div>
-              {playlists.length ? <div className="selfmusic-playlist-strip">{playlists.slice(0, 5).map((playlist) => <span key={playlist.id} className="selfmusic-playlist-chip" title={playlist.name}><ListMusic size={13} />{playlist.name}<small>{playlist.trackCount}</small></span>)}</div> : null}
+              {playlists.length ? <div className="selfmusic-playlist-strip" aria-label="Your playlists">{playlists.slice(0, 5).map((playlist) => <TVButton key={playlist.id} focusKey={'SELFMUSIC-PLAYLIST-' + playlist.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)} className={'selfmusic-playlist-chip' + (activePlaylistId === playlist.id ? ' is-active' : '')} data-tv-focus="true" onClick={() => void openPlaylist(playlist)} title={'Play playlist ' + playlist.name} aria-pressed={activePlaylistId === playlist.id}><ListMusic size={13} /><span>{playlist.name}</span><small>{playlist.trackCount}</small></TVButton>)}</div> : null}
               <div className="selfmusic-track-list" role="list" aria-label="Music tracks">
                 {loadingLibrary ? <div className="selfmusic-empty"><LoaderCircle className="spin" size={22} /><strong>Loading your library…</strong></div>
                   : visibleTracks.length ? visibleTracks.slice(0, 400).map((track, index) => {
@@ -605,7 +646,7 @@ export function SelfMusicPanel({
                         <TVButton focusKey={'SELFMUSIC-FAVORITE-' + track.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 55)} className={'selfmusic-favorite-button' + (favorite ? ' is-favorite' : '')} data-tv-focus="true" disabled={favoriteBusyId === track.id} onClick={() => void toggleFavorite(track)} aria-label={favorite ? 'Remove ' + track.title + ' from favorites' : 'Add ' + track.title + ' to favorites'}>{favoriteBusyId === track.id ? <LoaderCircle className="spin" size={15} /> : <Heart size={16} fill={favorite ? 'currentColor' : 'none'} />}</TVButton>
                       </div>
                     );
-                  }) : <div className="selfmusic-empty"><Music2 size={25} /><strong>{scope === 'favorites' ? 'No favorites yet' : query ? 'No matches' : 'Your library is empty'}</strong><span>{scope === 'favorites' ? 'Mark tracks with the heart to find them here.' : 'Add music to your SelfMusic server and refresh the library.'}</span></div>}
+                  }) : <div className="selfmusic-empty"><Music2 size={25} /><strong>{activePlaylistId ? 'This playlist is empty' : scope === 'favorites' ? 'No favorites yet' : query ? 'No matches' : 'Your library is empty'}</strong><span>{activePlaylistId ? 'This playlist has no tracks in the current library.' : scope === 'favorites' ? 'Mark tracks with the heart to find them here.' : 'Add music to your SelfMusic server and refresh the library.'}</span></div>}
                 {visibleTracks.length > 400 ? <p className="selfmusic-list-limit">Showing the first 400 matches for smooth TV navigation.</p> : null}
               </div>
               <footer className="selfmusic-library-footer">

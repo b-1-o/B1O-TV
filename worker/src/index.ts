@@ -182,7 +182,6 @@ export default {
         const output = await env.AI.run("@cf/openai/whisper-large-v3-turbo", {
           audio,
           task: "transcribe",
-          language: "ru",
           vad_filter: true,
           initial_prompt: "B1O TV, SelfMusic, YouTube, Jellyfin, Samsung Tizen. Russian or English speech."
         });

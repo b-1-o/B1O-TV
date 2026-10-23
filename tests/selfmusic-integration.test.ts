@@ -32,7 +32,8 @@ describe('B1O TV native-feeling service integration', () => {
     expect(app).not.toContain('BROWSER PREVIEW · SAMPLE APPS');
     expect(app).not.toContain('Sample apps · preview only');
     expect(cards).not.toContain('Preview only');
-    expect(app).toContain('Installed apps are TV-only');
+    expect(app).toContain('isTizenRuntime() && (');
+    expect(app).toContain('Installed on TV');
   });
 
   it('styles the built-in player with the same glass material and focus states', () => {

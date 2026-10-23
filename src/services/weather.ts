@@ -6,6 +6,14 @@ interface GeoResult {
 
 interface ForecastResult {
   current?: { temperature_2m: number; weather_code: number; is_day: number };
+  daily?: {
+    time: string[];
+    weather_code: number[];
+    temperature_2m_max: number[];
+    temperature_2m_min: number[];
+    sunrise: string[];
+    sunset: string[];
+  };
 }
 
 export function describeWeather(code: number): string {
@@ -43,6 +51,8 @@ export async function fetchWeather(city: string, signal?: AbortSignal): Promise<
     latitude: String(place.latitude),
     longitude: String(place.longitude),
     current: 'temperature_2m,weather_code,is_day',
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset',
+    forecast_days: '7',
     temperature_unit: 'fahrenheit',
     timezone: 'auto',
   }).toString();
@@ -52,10 +62,24 @@ export async function fetchWeather(city: string, signal?: AbortSignal): Promise<
   const forecast = (await forecastResponse.json()) as ForecastResult;
   if (!forecast.current) throw new Error('Weather service returned no current conditions.');
 
+  const daily = forecast.daily;
+  const forecastDays = daily
+    ? daily.time.flatMap((date, index) => {
+        const highF = daily.temperature_2m_max[index];
+        const lowF = daily.temperature_2m_min[index];
+        const code = daily.weather_code[index];
+        const sunrise = daily.sunrise[index];
+        const sunset = daily.sunset[index];
+        if (!date || !Number.isFinite(highF) || !Number.isFinite(lowF) || !Number.isFinite(code) || !sunrise || !sunset) return [];
+        return [{ date, code, highF, lowF, sunrise, sunset }];
+      })
+    : [];
+
   return {
     city: place.name,
     temperatureF: forecast.current.temperature_2m,
     code: forecast.current.weather_code,
     isDay: forecast.current.is_day === 1,
+    forecast: forecastDays,
   };
 }

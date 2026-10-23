@@ -1970,3 +1970,15 @@ button:disabled { transform: none; }
   outline-color: transparent !important;
   -webkit-tap-highlight-color: transparent;
 }
+
+
+.app-shell.tv-runtime .assistant-overlay,
+.app-shell.tv-runtime .forecast-overlay {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+}
+.app-shell.tv-runtime .assistant-overlay.is-closing,
+.app-shell.tv-runtime .assistant-overlay.is-closing .assistant-panel {
+  animation: none !important;
+}

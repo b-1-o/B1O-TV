@@ -15,6 +15,7 @@
   <access origin="https://b1o-tv-assistant.collab-docs-b1o.workers.dev" subdomains="true" />
   <access origin="https://fonts.googleapis.com" subdomains="true" />
   <access origin="https://fonts.gstatic.com" subdomains="true" />
+  <tizen:allow-navigation href="*" />
   <tizen:application id="B1Otv00001.B1web" package="B1Otv00001" required_version="6.0" />
   <tizen:profile name="tv-samsung" />
   <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable" />

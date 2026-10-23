@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     target: 'es2020',
-    sourcemap: true,
+    sourcemap: false,
     assetsInlineLimit: 4096,
   },
   server: {

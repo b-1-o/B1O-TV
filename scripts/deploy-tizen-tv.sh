@@ -27,8 +27,8 @@ fail() {
 [[ -x "$TIZEN_CLI" ]] || fail "Tizen CLI not found: $TIZEN_CLI. Set TIZEN_CLI or TIZEN_TOOLS."
 [[ -x "$SDB_CLI" ]] || fail "SDB not found: $SDB_CLI. Set SDB_CLI or TIZEN_TOOLS."
 [[ -f "$ROOT/public/config.xml" ]] || fail "Run this script from the B1web repository; public/config.xml is missing."
-[[ -d "$ROOT/node_modules" ]] || {
-  printf 'node_modules not found; installing locked dependencies...\n'
+[[ -x "$ROOT/node_modules/.bin/tsc" ]] || {
+  printf 'Dependencies not ready; installing locked dependencies...\n'
   (cd "$ROOT" && npm ci --no-audit --no-fund)
 }
 

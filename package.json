@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "typecheck:assistant": "wrangler deploy --dry-run --config worker/wrangler.toml"
+    "typecheck:assistant": "wrangler deploy --dry-run --config worker/wrangler.toml",
+    "deploy:tizen": "bash scripts/deploy-tizen-tv.sh"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

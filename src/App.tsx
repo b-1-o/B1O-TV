@@ -33,9 +33,8 @@ import { describeWeather, fetchWeather } from './services/weather';
 import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, listenSamsungVoiceInteraction, registerSamsungVoiceInteraction, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
 import { CardGrid, FocusGroup } from './components/tv/CardGrid';
 import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
-import { useTheme } from './contexts/ThemeContext';
 import { DEFAULT_CONFIG } from './defaultConfig';
-import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, HomeInstalledAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
+import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
 import { SelfMusicPanel } from './components/tv/SelfMusicPanel';
 
 const SETTINGS_KEY = 'b1o-tv:settings';
@@ -123,7 +122,6 @@ function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
 }
 
 function App() {
-  const { mode, toggleTheme } = useTheme();
   const { ref: spatialRootRef, focusKey: spatialRootFocusKey } = useFocusable({
     focusKey: 'B1O-TV-ROOT',
     trackChildren: true,
@@ -149,6 +147,7 @@ function App() {
   const islandExitTimer = useRef<number | undefined>(undefined);
   const viewExitTimer = useRef<number | undefined>(undefined);
   const viewEnterTimer = useRef<number | undefined>(undefined);
+  const lastContentFocusKeyRef = useRef<string | null>(null);
   const setupImportRef = useRef<HTMLInputElement | null>(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantClosing, setAssistantClosing] = useState(false);
@@ -176,6 +175,11 @@ function App() {
     if (nextView === view) return;
     if (viewExitTimer.current !== undefined) window.clearTimeout(viewExitTimer.current);
     if (viewEnterTimer.current !== undefined) window.clearTimeout(viewEnterTimer.current);
+    if (isTizenRuntime()) {
+      setView(nextView);
+      setViewMotion('');
+      return;
+    }
     setViewMotion('exit');
     viewExitTimer.current = window.setTimeout(() => {
       setView(nextView);
@@ -211,6 +215,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (isTizenRuntime()) {
+      setCompactHome(false);
+      return;
+    }
     const onScroll = () => setCompactHome(window.scrollY > 120);
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
@@ -362,6 +370,58 @@ function App() {
     }, 0);
     return () => window.clearTimeout(focusTimer);
   }, [view, preferredFocusKey]);
+
+  // Keep the bottom dock reachable with the Samsung remote even when spatial
+  // navigation considers the content cards a separate focus group.
+  useEffect(() => {
+    const onRemoteVerticalKey = (event: KeyboardEvent) => {
+      const goDown = event.key === 'ArrowDown' || event.key === 'Down' || event.keyCode === 40;
+      const goUp = event.key === 'ArrowUp' || event.key === 'Up' || event.keyCode === 38;
+      if (!goDown && !goUp) return;
+      if (assistantOpen || forecastOpen) return;
+
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+      if (target instanceof HTMLInputElement && !['checkbox', 'range', 'file'].includes(target.type)) return;
+
+      const focused = document.querySelector<HTMLElement>('[data-tv-focused="true"]');
+      if (!focused) return;
+      const inDock = focused.closest('.floating-dock');
+
+      if (goUp && inDock) {
+        const rememberedKey = lastContentFocusKeyRef.current;
+        const targetKey = rememberedKey && doesFocusableExist(rememberedKey)
+          ? rememberedKey
+          : doesFocusableExist(preferredFocusKey) ? preferredFocusKey : 'BRAND-HOME';
+        event.preventDefault();
+        event.stopPropagation();
+        setFocus(targetKey);
+        return;
+      }
+
+      if (!goDown || inDock) return;
+      const main = focused.closest<HTMLElement>('.main-content');
+      if (!main) return;
+      const currentRect = focused.getBoundingClientRect();
+      const hasFocusableBelow = Array.from(main.querySelectorAll<HTMLElement>('[data-tv-focus="true"]')).some((element) => {
+        if (element === focused || ('disabled' in element && Boolean((element as HTMLButtonElement).disabled))) return false;
+        const style = window.getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && rect.top > currentRect.top + 8;
+      });
+      if (hasFocusableBelow) return;
+
+      const currentFocusKey = focused.getAttribute('data-tv-focus-key');
+      if (currentFocusKey) lastContentFocusKeyRef.current = currentFocusKey;
+      event.preventDefault();
+      event.stopPropagation();
+      setFocus('DOCK-apps');
+    };
+
+    window.addEventListener('keydown', onRemoteVerticalKey, true);
+    return () => window.removeEventListener('keydown', onRemoteVerticalKey, true);
+  }, [assistantOpen, forecastOpen, preferredFocusKey]);
 
   useEffect(() => {
     if (!assistantOpen) return;
@@ -775,10 +835,6 @@ function App() {
     return readSavedNotes();
   }, [notesVersion]);
 
-  const homeInstalledApps = useMemo(() => installedApps
-    .filter((app) => app.id !== 'B1Otv00001.B1web' && app.name.toLocaleLowerCase() !== 'b1o tv')
-    .slice(0, 8), [installedApps]);
-
   const shouldShowIsland = !assistantOpen && (
     voiceListening || assistantBusy || Boolean(assistantActivityText) || Boolean(timer) || musicActivity
   );
@@ -872,19 +928,6 @@ function App() {
               </section>
             </div>
 
-            {homeInstalledApps.length > 0 && (
-              <section className="section-block home-installed-section" aria-label="Installed TV apps">
-                <div className="section-heading">
-                  <div><span className="eyebrow small">READY TO LAUNCH</span><h2>On This TV</h2></div>
-                  <TVButton className="text-action all-library-link" data-tv-focus="true" onClick={() => navigateToView('apps')}>All Apps <ArrowRight size={15} /></TVButton>
-                </div>
-                <CardGrid focusKey="HOME-INSTALLED-GRID" className="home-installed-apps">
-                  {homeInstalledApps.map((app) => (
-                    <HomeInstalledAppCard key={app.id} app={app} onSelect={launchInstalledApp} />
-                  ))}
-                </CardGrid>
-              </section>
-            )}
 
             <section className="section-block featured-section media-catalog" id="media-section">
               <div className="section-heading">
@@ -958,7 +1001,12 @@ function App() {
             </section>
             <div className="settings-grid">
               <section className="settings-card glass-panel"><div className="settings-card-head"><Cloud /><div><h2>Weather</h2><p>Choose the location and temperature units shown on Home.</p></div></div><label className="field-label">City<TVInput data-tv-focus="true" value={settings.city} onChange={(event) => updateSetting('city', event.target.value)} placeholder="Los Angeles" /></label><label className="field-label">Temperature units<TVSelect data-tv-focus="true" value={settings.temperatureUnit} onChange={(event) => updateSetting('temperatureUnit', event.target.value === 'C' ? 'C' : 'F')}><option value="F">Fahrenheit (°F)</option><option value="C">Celsius (°C)</option></TVSelect></label><p className="field-help">Current conditions are provided by Open-Meteo. Location access is not requested automatically.</p></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Appearance</h2><p>Theme, wallpaper, and floating navigation material.</p></div></div><div className="theme-setting-row"><span><strong>Color theme</strong><small>Saved automatically and restored on launch.</small></span><TVButton className="secondary-button theme-toggle-button" data-tv-focus="true" aria-label={'Switch to ' + (mode === 'dark' ? 'light' : 'dark') + ' theme'} onClick={toggleTheme}>{mode === 'dark' ? <Moon size={17} /> : <Sun size={17} />} {mode === 'dark' ? 'Dark theme' : 'Light theme'}</TVButton></div><label className="field-label">Liquid Glass intensity <strong>{settings.glassIntensity}%</strong><TVInput data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Reduce motion</strong><small>Disables non-essential animations.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label><label className="check-row"><span><strong>Weather-adaptive scenery</strong><small>Switches between included landscapes based on weather and day/night.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.adaptiveScenery} onChange={(event) => updateSetting('adaptiveScenery', event.target.checked)} /></label></section>
+              <section className="settings-card glass-panel">
+                <div className="settings-card-head"><Sparkles /><div><h2>Appearance</h2><p>Wallpaper and navigation materials, tuned for the TV.</p></div></div>
+                <label className="field-label">Liquid Glass intensity <strong>{settings.glassIntensity}%</strong><TVInput data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label>
+                <label className="check-row"><span><strong>Reduce motion</strong><small>Disables non-essential animations.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label>
+                <label className="check-row"><span><strong>Weather-adaptive scenery</strong><small>Switches between included landscapes based on weather and day/night.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.adaptiveScenery} onChange={(event) => updateSetting('adaptiveScenery', event.target.checked)} /></label>
+              </section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="http://192.168.1.10:8096" /></label><label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="http://192.168.1.10:8787" /></label><p className="field-help">SelfMusic now runs inside B1O TV using its authenticated API. Add the exact origin shown on the built-in SelfMusic screen to SELF_MUSIC_ALLOWED_ORIGINS in the SelfMusic server’s private .env file, then restart that server. The player keeps its signed access token in memory and never saves your password. Use the LAN address for local preview or a private HTTPS/Tailscale URL for remote access.</p><TVButton className="selfmusic-open-button" data-tv-focus="true" onClick={() => { void runApp('selfmusic'); }}><Music2 size={16} /> Open built-in player <ArrowRight size={16} /></TVButton></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI & Voice</h2><p>Connect your backend endpoint. Keep model API keys on the server.</p></div></div><label className="field-label">AI backend endpoint<TVInput data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Device token<TVInput data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Your Cloudflare Worker token" /></label><p className="field-help">This is the device access token, not the model API key. It stays in local app storage. The endpoint accepts message/history JSON and returns a reply.</p><label className="check-row"><span><strong>Speak replies aloud</strong><small>Requires Speech Synthesis support in this Tizen browser.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><TVButton className="secondary-button test-voice-button" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={17} /> Test Voice Assistant <ArrowRight size={15} /></TVButton></section>
             </div>

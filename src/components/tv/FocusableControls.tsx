@@ -1,4 +1,4 @@
-import { useCallback, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type Ref, type SelectHTMLAttributes } from 'react';
+import { useCallback, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type Ref, type SelectHTMLAttributes } from 'react';
 import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 
 type MutableElementRef<T extends HTMLElement> = { current: T | null };
@@ -34,6 +34,10 @@ export function TVButton({ focusKey, className, disabled, onClick, ...props }: T
   });
   const mergedRef = useCallback((node: HTMLButtonElement | null) => mergeFocusRef(ref, buttonRef, node), [ref]);
 
+  useEffect(() => {
+    if (focused) buttonRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  }, [focused]);
+
   return (
     <button
       {...props}
@@ -42,6 +46,7 @@ export function TVButton({ focusKey, className, disabled, onClick, ...props }: T
       onClick={onClick}
       className={[className, focused ? 'tv-focusable--focused' : ''].filter(Boolean).join(' ')}
       data-tv-focused={focused ? 'true' : undefined}
+      data-tv-focus-key={resolvedFocusKey}
     />
   );
 }
@@ -98,6 +103,10 @@ export function TVInput({ focusKey, className, disabled, type, ...props }: TVInp
   });
   const mergedRef = useCallback((node: HTMLInputElement | null) => mergeFocusRef(ref, inputRef, node), [ref]);
 
+  useEffect(() => {
+    if (focused) inputRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  }, [focused]);
+
   return (
     <input
       {...props}
@@ -106,6 +115,7 @@ export function TVInput({ focusKey, className, disabled, type, ...props }: TVInp
       disabled={disabled}
       className={[className, focused ? 'tv-focusable--focused' : ''].filter(Boolean).join(' ')}
       data-tv-focused={focused ? 'true' : undefined}
+      data-tv-focus-key={resolvedFocusKey}
     />
   );
 }
@@ -131,6 +141,10 @@ export function TVSelect({ focusKey, className, disabled, ...props }: TVSelectPr
   });
   const mergedRef = useCallback((node: HTMLSelectElement | null) => mergeFocusRef(ref, selectRef, node), [ref]);
 
+  useEffect(() => {
+    if (focused) selectRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  }, [focused]);
+
   return (
     <select
       {...props}
@@ -138,6 +152,7 @@ export function TVSelect({ focusKey, className, disabled, ...props }: TVSelectPr
       disabled={disabled}
       className={[className, focused ? 'tv-focusable--focused' : ''].filter(Boolean).join(' ')}
       data-tv-focused={focused ? 'true' : undefined}
+      data-tv-focus-key={resolvedFocusKey}
     />
   );
 }

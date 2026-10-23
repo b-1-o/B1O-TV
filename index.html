@@ -2,15 +2,8 @@
 <html lang="en">
   <head>
     <script>
-      try {
-        const savedTheme = localStorage.getItem('app-theme');
-        document.documentElement.setAttribute(
-          'data-theme',
-          savedTheme === 'dark' || savedTheme === 'light' ? savedTheme : 'light'
-        );
-      } catch {
-        document.documentElement.setAttribute('data-theme', 'light');
-      }
+      document.documentElement.setAttribute('data-theme', 'dark');
+      try { localStorage.setItem('app-theme', 'dark'); } catch { /* Storage is optional. */ }
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />

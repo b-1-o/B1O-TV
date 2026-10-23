@@ -77,7 +77,10 @@ export function registerSamsungVoiceInteraction(handlers: {
       onchangeappstate: handlers.onAppState,
       onrequestcontentcontext: () => {
         try {
-          const items = Array.from(document.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
+          const scope = handlers.getState() === 'Search'
+            ? document.querySelector<HTMLElement>('.assistant-panel') ?? document
+            : document;
+          const items = Array.from(scope.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
             .filter((el) => {
               if ('disabled' in el && Boolean((el as HTMLButtonElement).disabled)) return false;
               const style = getComputedStyle(el);
@@ -99,7 +102,10 @@ export function registerSamsungVoiceInteraction(handlers: {
         const normalize = (value: string) => value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
         const wanted = normalize(requested);
         if (!wanted) return false;
-        const visible = Array.from(document.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
+        const scope = handlers.getState() === 'Search'
+          ? document.querySelector<HTMLElement>('.assistant-panel') ?? document
+          : document;
+        const visible = Array.from(scope.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
           .filter((el) => !('disabled' in el && Boolean((el as HTMLButtonElement).disabled)) && el.getClientRects().length > 0);
         const label = (el: HTMLElement) => normalize(el.getAttribute('aria-label') || el.innerText || el.textContent || '');
         const exact = visible.find((el) => label(el) === wanted);

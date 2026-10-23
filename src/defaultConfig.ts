@@ -9,6 +9,7 @@ import type { TVSettings } from './types';
 export const DEFAULT_CONFIG: TVSettings = {
   city: 'North Hollywood',
   reduceMotion: false,
+  adaptiveScenery: false,
   glassIntensity: 100,
   aiEndpoint: 'https://b1o-tv-assistant.collab-docs-b1o.workers.dev',
   aiToken: '',

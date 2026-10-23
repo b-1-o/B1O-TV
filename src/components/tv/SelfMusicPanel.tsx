@@ -260,12 +260,18 @@ export function SelfMusicPanel({
       setTracks([]);
       setFavoriteIds([]);
       setPlaylists([]);
+      setActivePlaylistId('');
+      setPlaylistTrackIds([]);
+      setPlaylistNameDraft('');
+      setPlaylistPickerTrackId('');
+      setPlaylistActionKey('');
       setCurrentTrackId('');
       setStreamUrl('');
       setImageTickets({});
       setIsPlaying(false);
       setLoadError('');
       setStatusMessage('');
+      setProfileName('');
       onAccessTokenChange('');
       return;
     }
@@ -275,6 +281,9 @@ export function SelfMusicPanel({
       setPlaylists([]);
       setActivePlaylistId('');
       setPlaylistTrackIds([]);
+      setPlaylistNameDraft('');
+      setPlaylistPickerTrackId('');
+      setPlaylistActionKey('');
       setImageTickets({});
       setProfileName('');
       return;
@@ -593,6 +602,9 @@ export function SelfMusicPanel({
     setPlaylists([]);
     setActivePlaylistId('');
     setPlaylistTrackIds([]);
+    setPlaylistNameDraft('');
+    setPlaylistPickerTrackId('');
+    setPlaylistActionKey('');
     setImageTickets({});
     setPassword('');
     setProfileName('');

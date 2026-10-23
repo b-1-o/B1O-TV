@@ -108,6 +108,34 @@ export const InstalledAppRow = memo(function InstalledAppRow({
   );
 });
 
+export const HomeInstalledAppCard = memo(function HomeInstalledAppCard({
+  app,
+  onSelect,
+}: {
+  app: InstalledTVApp;
+  onSelect: (appId: string) => void;
+}) {
+  const handleSelect = useCallback(() => onSelect(app.id), [app.id, onSelect]);
+  const iconUrl = app.iconPath?.startsWith('/') ? 'file://' + app.iconPath : app.iconPath;
+
+  return (
+    <TVButton
+      focusKey={'HOME-INSTALLED-' + app.id}
+      className="home-installed-app"
+      data-tv-focus="true"
+      aria-label={'Open ' + app.name}
+      onClick={handleSelect}
+    >
+      <span className="home-app-icon" aria-hidden="true">
+        <Grid2X2 className="home-app-fallback" />
+        {iconUrl ? <img src={iconUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : null}
+      </span>
+      <span className="home-app-copy"><strong>{app.name}</strong><small>Installed on TV</small></span>
+      <ArrowRight size={17} />
+    </TVButton>
+  );
+});
+
 export interface WallpaperCardData {
   id: string;
   name: string;

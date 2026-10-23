@@ -305,6 +305,13 @@ export async function launchTVService(
     };
   }
 
+  if (target === 'youtube') {
+    return {
+      ok: false,
+      message: 'YouTube for Tizen is not installed. Install it separately using the project guide at github.com/SushyDev/tizen-youtube, then open Apps → Refresh TV apps.',
+    };
+  }
+
   const names: Record<Exclude<AppTarget, 'assistant'>, string> = {
     youtube: 'a compatible YouTube client',
     jellyfin: 'Jellyfin',

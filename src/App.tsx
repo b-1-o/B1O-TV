@@ -726,9 +726,17 @@ function App() {
       return true;
     },
     onSelect: (selection) => {
-      const controls = Array.from(document.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
-        .filter((element) => !('disabled' in element && Boolean((element as HTMLButtonElement).disabled)) && element.getClientRects().length > 0);
-      const focused = document.querySelector<HTMLElement>('[data-tv-focused="true"]');
+      const scope = assistantOpen
+        ? document.querySelector<HTMLElement>('.assistant-panel') ?? document
+        : document.querySelector<HTMLElement>('.main-content') ?? document;
+      const controls = Array.from(scope.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
+        .filter((element) => {
+          if ('disabled' in element && Boolean((element as HTMLButtonElement).disabled)) return false;
+          const style = window.getComputedStyle(element);
+          return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+        });
+      const focused = scope.querySelector<HTMLElement>('[data-tv-focused="true"]')
+        ?? document.querySelector<HTMLElement>('[data-tv-focused="true"]');
       if (selection === 0) { if (!focused) return false; focused.click(); return true; }
       const index = selection === -1 ? controls.length - 1 : selection > 0 ? Math.min(controls.length - 1, selection - 1) : -1;
       if (index < 0 || !controls[index]) return false;
@@ -976,7 +984,7 @@ function App() {
               {assistantBusy && <div className="chat-message assistant"><span className="chat-avatar"><Sparkles size={15} /></span><p className="typing-indicator"><i /><i /><i /></p></div>}
             </div>
             <div className="assistant-input-area"><TVButton className={'voice-button' + (voiceListening ? ' listening' : '')} data-tv-focus="true" onClick={startVoiceAssistant} aria-label="Start voice input">{voiceListening ? <LoaderCircle className="spin" /> : <Mic />}</TVButton><form className="assistant-form" onSubmit={(event) => { event.preventDefault(); void submitAssistant(); }}><TVInput data-tv-focus="true" data-assistant-input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask anything…" aria-label="Message the assistant" /><TVButton data-tv-focus="true" disabled={!draft.trim() || assistantBusy} aria-label="Send message"><ArrowRight /></TVButton></form></div>
-            <div className="assistant-footnote"><Volume2 size={13} /> Browser preview: Alt + V. Samsung Voice Interaction can navigate and select; free-form dictation depends on SpeechRecognition support.</div>
+            <div className="assistant-footnote"><Volume2 size={13} /> TV voice: Samsung Voice Interaction handles commands. Dictation tries microphone recording plus cloud transcription when the TV firmware exposes audio capture; the Device token must be configured in Settings.</div>
           </FocusGroup>
         </div>
       )}

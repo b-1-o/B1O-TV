@@ -69,19 +69,19 @@ printf '\n[4/5] Copying package to TV %s...\n' "$TV_ADDR"
 "$SDB_CLI" -s "$TV_ADDR" push "$OUT_DIR/B1O TV.wgt" "$REMOTE_WGT"
 
 if [[ -n "$TIZENTUBE_WGT" ]]; then
-  printf '\\n[4/5] Installing TizenTube before B1O TV...\\n'
-  printf 'TizenTube package ID: %s\\n' "$TIZENTUBE_PACKAGE_ID"
-  printf 'Using provided, already TV-installable WGT: %s\\n' "$TIZENTUBE_WGT"
+  printf '\nInstalling optional TizenTube before B1O TV...\n'
+  printf 'TizenTube package ID: %s\n' "$TIZENTUBE_PACKAGE_ID"
+  printf 'Using provided, already TV-installable WGT: %s\n' "$TIZENTUBE_WGT"
   "$SDB_CLI" -s "$TV_ADDR" push "$TIZENTUBE_WGT" "$REMOTE_TIZENTUBE_WGT"
   "$SDB_CLI" -s "$TV_ADDR" shell 0 vd_appinstall "$TIZENTUBE_PACKAGE_ID" "$REMOTE_TIZENTUBE_WGT"
 fi
 
-printf '\\n[5/5] Installing and launching B1O TV...\\n'
+printf '\n[5/5] Installing and launching B1O TV...\n'
 "$SDB_CLI" -s "$TV_ADDR" shell 0 vd_appinstall "$PACKAGE_ID" "$REMOTE_WGT"
 "$TIZEN_CLI" run -s "$TV_ADDR" -p "$APP_ID"
 
-printf '\\nDone. Signed WGT: %s\\n' "$OUT_DIR/B1O TV.wgt"
+printf '\nDone. Signed WGT: %s\n' "$OUT_DIR/B1O TV.wgt"
 if [[ -n "$TIZENTUBE_WGT" ]]; then
-  printf 'TizenTube was installed separately before B1O TV.\\n'
+  printf 'TizenTube was installed separately before B1O TV.\n'
 fi
-printf 'If the TV app opens but a feature does not work, capture TV logs before changing the certificate/profile.\\n'
+printf 'If the TV app opens but a feature does not work, capture TV logs before changing the certificate/profile.\n'

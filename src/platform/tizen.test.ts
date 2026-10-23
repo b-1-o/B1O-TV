@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { isAllowedServiceUrl } from './tizen';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isAllowedServiceUrl, launchTVService } from './tizen';
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('isAllowedServiceUrl', () => {
   it('accepts public HTTPS endpoints', () => {
@@ -24,5 +26,27 @@ describe('isAllowedServiceUrl', () => {
 
   it('rejects credential-bearing URLs', () => {
     expect(isAllowedServiceUrl('https://user:secret@music.example.com')).toBe(false);
+  });
+});
+
+describe('launchTVService', () => {
+  it('launches TizenTube using its exact app ID in the Tizen runtime', async () => {
+    const launch = vi.fn((_appId: string, onSuccess?: () => void) => onSuccess?.());
+    vi.stubGlobal('window', {
+      tizen: {
+        application: {
+          getAppsInfo: vi.fn(),
+          launch,
+        },
+      },
+      setTimeout: globalThis.setTimeout,
+      clearTimeout: globalThis.clearTimeout,
+    });
+
+    const result = await launchTVService('youtube', [], { jellyfinUrl: '', selfMusicUrl: '' });
+
+    expect(launch).toHaveBeenCalledWith('Ad6NutHP8l.TizenTube', expect.any(Function), expect.any(Function));
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('TizenTube launched');
   });
 });

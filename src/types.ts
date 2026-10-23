@@ -31,11 +31,21 @@ export interface TVSettings {
   temperatureUnit: 'F' | 'C';
 }
 
+export interface WeatherDay {
+  date: string;
+  code: number;
+  highF: number;
+  lowF: number;
+  sunrise: string;
+  sunset: string;
+}
+
 export interface WeatherSnapshot {
   city: string;
   temperatureF: number;
   code: number;
   isDay: boolean;
+  forecast: WeatherDay[];
 }
 
 export interface ActiveTimer {

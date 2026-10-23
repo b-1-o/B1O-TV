@@ -1849,3 +1849,62 @@ button:disabled { transform: none; }
 .app-shell.tv-runtime .forecast-overlay { animation:none !important; }
 .app-shell.tv-runtime .forecast-day { background:rgba(255,255,255,.03); }
 .app-shell.tv-runtime .weather-panel[data-tv-focused="true"] { transform:scale(1.015); box-shadow:0 12px 26px rgba(0,0,0,.36) !important; }
+
+
+/* App shelf inspired by remote-first Tizen launchers: real installed apps, compact tiles. */
+.home-installed-section { margin-top: 4px; margin-bottom: 12px; }
+.home-installed-apps {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 7px 12px 15px;
+  scrollbar-width: none;
+  scroll-behavior: auto;
+}
+.home-installed-apps::-webkit-scrollbar { display: none; }
+.home-installed-app {
+  display: flex;
+  flex: 0 0 224px;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  min-height: 84px;
+  padding: 13px 15px;
+  border: 1px solid rgba(232,240,251,.13);
+  border-radius: 21px;
+  color: #f4f7fb;
+  text-align: left;
+  background: linear-gradient(145deg, rgba(20,25,34,.9), rgba(5,8,14,.92));
+  box-shadow: 0 12px 28px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.045);
+}
+.home-app-icon {
+  position: relative;
+  display: grid;
+  flex: 0 0 48px;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 14px;
+  color: rgba(241,246,253,.8);
+  background: rgba(255,255,255,.055);
+}
+.home-app-icon .home-app-fallback { width: 24px; height: 24px; stroke-width: 1.6; }
+.home-app-icon img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+  border-radius: 14px;
+  background: #080a0e;
+}
+.home-app-copy { display: grid; flex: 1; gap: 4px; min-width: 0; }
+.home-app-copy strong { overflow: hidden; font-size: 13px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.home-app-copy small { color: rgba(220,230,244,.58); font-size: 10px; }
+.home-installed-app > svg { flex: 0 0 auto; color: rgba(220,230,244,.56); }
+.app-shell.tv-runtime .home-installed-apps { scroll-behavior: auto; }
+.app-shell.tv-runtime .home-installed-app { transition: transform .12s ease-out !important; }

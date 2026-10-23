@@ -513,10 +513,13 @@ export function SelfMusicPanel({
       setArtworkFailed(false);
     } catch (error) {
       setLoadError(friendlyNetworkError(error));
+      if (error instanceof Error && /session expired|unauthorized|sign in to access/i.test(error.message.toLowerCase())) {
+        onAccessTokenChange('');
+      }
     } finally {
       setBusyTrackId('');
     }
-  }, [createMediaTicket, normalizedUrl, friendlyNetworkError]);
+  }, [createMediaTicket, normalizedUrl, friendlyNetworkError, onAccessTokenChange]);
 
   const togglePlayback = useCallback(async () => {
     const audio = audioRef.current;
@@ -583,12 +586,25 @@ export function SelfMusicPanel({
       setStatusMessage(isFavorite ? 'Removed from favorites.' : 'Added to favorites.');
     } catch (error) {
       setLoadError(friendlyNetworkError(error));
+      if (error instanceof Error && /session expired|unauthorized|sign in to access/i.test(error.message.toLowerCase())) {
+        onAccessTokenChange('');
+      }
     } finally {
       setFavoriteBusyId('');
     }
   };
 
   const handleSignOut = () => {
+    if (accessToken && normalizedUrl) {
+      void fetch(normalizedUrl + '/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + accessToken },
+        credentials: 'omit',
+        cache: 'no-store',
+      }).catch(() => {
+        // The client still clears local playback and forgets the token if the server is offline.
+      });
+    }
     audioRef.current?.pause();
     if (audioRef.current) {
       audioRef.current.removeAttribute('src');

@@ -569,7 +569,7 @@ export function SelfMusicPanel({
             <span className="selfmusic-setup-icon"><Library size={24} /></span>
             <span className="eyebrow small">ONE-TIME SERVER SETUP</span>
             <h2>Allow B1O TV to connect</h2>
-            <p>SelfMusic allows embedded clients only when their exact origin is configured. On the computer running SelfMusic, add this line to its private <code>.env</code> file:</p>
+            <p>SelfMusic allows embedded clients only when their exact origin is configured. On the computer running SelfMusic, add this origin to the comma-separated value in its private <code>.env</code> file:</p>
             <div className="selfmusic-origin-box"><small>B1O TV ORIGIN</small><code>{typeof window !== 'undefined' ? window.location.origin : 'Current app origin'}</code></div>
             {typeof window !== 'undefined' && window.location.origin === 'null' ? <p className="selfmusic-origin-warning">This TV runtime reports an opaque origin (null). Null origins are shared by different sandboxed contexts. Only allow this origin if you trust every page that can reach your private SelfMusic server; keep that server off the public internet.</p> : null}
             <div className="selfmusic-env-line"><code>SELF_MUSIC_ALLOWED_ORIGINS={typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}</code><TVButton className="selfmusic-copy-button" data-tv-focus="true" onClick={() => {
@@ -583,7 +583,7 @@ export function SelfMusicPanel({
                 () => setStatusMessage('Clipboard access was denied. Copy the displayed line manually into SelfMusic .env.'),
               );
             }} aria-label="Copy SelfMusic origin setting"><Copy size={15} /></TVButton></div>
-            <p>Save the file and restart SelfMusic. For the TV, use the exact origin shown by B1O TV on the television itself. Keep SelfMusic on your private LAN/Tailscale network and use HTTPS on any untrusted network. Never expose port 8787 directly to the public internet.</p>
+            <p>If SELF_MUSIC_ALLOWED_ORIGINS already exists, append the new trusted origin with a comma instead of creating a second variable. Save the file and restart SelfMusic. For the TV, use the exact origin shown by B1O TV on the television itself. Keep SelfMusic on your private LAN/Tailscale network and use HTTPS on any untrusted network. Never expose port 8787 directly to the public internet.</p>
             {statusMessage ? <p className="selfmusic-inline-status" role="status">{statusMessage}</p> : null}
           </aside>
         </div>

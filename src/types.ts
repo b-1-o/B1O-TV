@@ -21,6 +21,7 @@ export interface InstalledTVApp {
 export interface TVSettings {
   city: string;
   reduceMotion: boolean;
+  adaptiveScenery: boolean;
   glassIntensity: number;
   aiEndpoint: string;
   aiToken: string;

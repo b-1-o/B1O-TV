@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
+  Copy,
   Disc3,
   Heart,
   Library,
@@ -570,7 +571,17 @@ export function SelfMusicPanel({
             <h2>Allow B1O TV to connect</h2>
             <p>SelfMusic allows embedded clients only when their exact origin is configured. On the computer running SelfMusic, add this line to its private <code>.env</code> file:</p>
             <div className="selfmusic-origin-box"><small>B1O TV ORIGIN</small><code>{typeof window !== 'undefined' ? window.location.origin : 'Current app origin'}</code></div>
-            <div className="selfmusic-env-line"><code>SELF_MUSIC_ALLOWED_ORIGINS={typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}</code><TVButton className="selfmusic-copy-button" data-tv-focus="true" onClick={() => { void navigator.clipboard?.writeText('SELF_MUSIC_ALLOWED_ORIGINS=' + (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173')); setStatusMessage('Environment line copied.'); }} aria-label="Copy SelfMusic origin setting"><Volume2 size={15} /></TVButton></div>
+            <div className="selfmusic-env-line"><code>SELF_MUSIC_ALLOWED_ORIGINS={typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}</code><TVButton className="selfmusic-copy-button" data-tv-focus="true" onClick={() => {
+              const line = 'SELF_MUSIC_ALLOWED_ORIGINS=' + (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+              if (!navigator.clipboard?.writeText) {
+                setStatusMessage('Clipboard access is unavailable here. Copy the displayed line manually into SelfMusic .env.');
+                return;
+              }
+              void navigator.clipboard.writeText(line).then(
+                () => setStatusMessage('Environment line copied.'),
+                () => setStatusMessage('Clipboard access was denied. Copy the displayed line manually into SelfMusic .env.'),
+              );
+            }} aria-label="Copy SelfMusic origin setting"><Copy size={15} /></TVButton></div>
             <p>Save the file and restart SelfMusic. For the TV, use the exact origin shown by B1O TV on the television itself. Keep SelfMusic on your private LAN/Tailscale network and use HTTPS outside your home.</p>
             {statusMessage ? <p className="selfmusic-inline-status" role="status">{statusMessage}</p> : null}
           </aside>

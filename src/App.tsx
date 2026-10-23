@@ -28,7 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import type { ActiveTimer, AppTarget, AssistantMessage, InstalledTVApp, TVApp, TVSettings, View, WeatherSnapshot } from './types';
-import { createAssistantMessage, askConfiguredAssistant, formatDuration, parseLocalIntent, readSavedNotes, saveNote } from './services/assistant';
+import { createAssistantMessage, askConfiguredAssistant, formatDuration, parseLocalIntent, readSavedNotes, saveNote, transcribeRecordedAudio } from './services/assistant';
 import { describeWeather, fetchWeather } from './services/weather';
 import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, listenSamsungVoiceInteraction, registerSamsungVoiceInteraction, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
 import { CardGrid, FocusGroup } from './components/tv/CardGrid';
@@ -165,6 +165,11 @@ function App() {
   const [remainingMs, setRemainingMs] = useState(0);
   const [notesVersion, setNotesVersion] = useState(0);
   const voiceStartRef = useRef<() => void>(() => undefined);
+  const voiceActionAtRef = useRef(0);
+  const voiceRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+  const voiceRecorderTimerRef = useRef<number | undefined>(undefined);
+  const voiceChunksRef = useRef<BlobPart[]>([]);
 
   const navigateToView = useCallback((nextView: View) => {
     if (nextView === view) return;
@@ -256,8 +261,14 @@ function App() {
   useEffect(() => registerVoiceRemoteKey(() => {
     setAssistantClosing(false);
     setAssistantOpen(true);
-    voiceStartRef.current();
+    window.setTimeout(() => voiceStartRef.current(), 80);
   }), []);
+
+  useEffect(() => () => {
+    if (voiceRecorderTimerRef.current !== undefined) window.clearTimeout(voiceRecorderTimerRef.current);
+    try { if (voiceRecorderRef.current?.state !== 'inactive') voiceRecorderRef.current?.stop(); } catch { /* App is closing. */ }
+    voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
 
   useEffect(() => {
     try {
@@ -310,12 +321,12 @@ function App() {
         }
       }
 
-      const micKey = event.key === 'Microphone' || event.key === 'AudioInputMicrophone';
+      const micKey = event.key === 'Microphone' || event.key === 'AudioInputMicrophone' || event.key.toLocaleLowerCase().includes('microphone');
       if (micKey) {
         event.preventDefault();
-        setAssistantOpen(false);
         setAssistantClosing(false);
-        window.setTimeout(() => voiceStartRef.current(), 180);
+        setAssistantOpen(true);
+        window.setTimeout(() => voiceStartRef.current(), 80);
         return;
       }
 
@@ -514,7 +525,134 @@ function App() {
     }
   };
 
+  const stopVoiceRecording = () => {
+    if (voiceRecorderTimerRef.current !== undefined) {
+      window.clearTimeout(voiceRecorderTimerRef.current);
+      voiceRecorderTimerRef.current = undefined;
+    }
+    const recorder = voiceRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      try { recorder.stop(); } catch { /* It may already be stopping. */ }
+    }
+  };
+
+  const startRecordedSpeech = async (): Promise<boolean> => {
+    if (!settings.aiEndpoint.trim() || !settings.aiToken.trim()) {
+      notify('To dictate into AI, configure the AI endpoint and Device token in Settings → AI & Voice.');
+      return false;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder === 'undefined') return false;
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      return false;
+    }
+
+    let recorder: MediaRecorder;
+    try {
+      const preferredTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+      const mimeType = preferredTypes.find((type) => {
+        try { return typeof window.MediaRecorder.isTypeSupported !== 'function' || window.MediaRecorder.isTypeSupported(type); }
+        catch { return false; }
+      });
+      recorder = mimeType
+        ? new window.MediaRecorder(stream, { mimeType })
+        : new window.MediaRecorder(stream);
+    } catch {
+      stream.getTracks().forEach((track) => track.stop());
+      return false;
+    }
+
+    voiceChunksRef.current = [];
+    voiceStreamRef.current = stream;
+    voiceRecorderRef.current = recorder;
+    recorder.ondataavailable = (event: BlobEvent) => {
+      if (event.data && event.data.size > 0) voiceChunksRef.current.push(event.data);
+    };
+    recorder.onerror = () => {
+      stopVoiceRecording();
+      setVoiceListening(false);
+      showAssistantActivity('Microphone recording failed');
+      notify('Could not record microphone audio on this TV. Try the voice button again.');
+    };
+    recorder.onstop = () => {
+      if (voiceRecorderTimerRef.current !== undefined) {
+        window.clearTimeout(voiceRecorderTimerRef.current);
+        voiceRecorderTimerRef.current = undefined;
+      }
+      voiceRecorderRef.current = null;
+      voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
+      voiceStreamRef.current = null;
+      setVoiceListening(false);
+      const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+      voiceChunksRef.current = [];
+      if (blob.size < 512) {
+        showAssistantActivity('No audio detected');
+        notify('No audio was captured. Check that the microphone is available to the TV app.');
+        return;
+      }
+      showAssistantActivity('Transcribing speech…');
+      void transcribeRecordedAudio(settings.aiEndpoint, blob, settings.aiToken)
+        .then((transcript) => {
+          if (transcript.trim()) void submitAssistant(transcript);
+          else notify('No speech was recognized. Try again.');
+        })
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Speech recognition failed.';
+          showAssistantActivity('Speech recognition failed');
+          notify(message);
+        });
+    };
+
+    try {
+      recorder.start(250);
+      setVoiceListening(true);
+      setAssistantActivityText('Listening… tap the microphone to send');
+      if (assistantActivityTimer.current !== undefined) window.clearTimeout(assistantActivityTimer.current);
+      // TV remotes are awkward for hold-to-talk, so automatically end each recording after 8 seconds.
+      voiceRecorderTimerRef.current = window.setTimeout(() => {
+        if (voiceRecorderRef.current?.state === 'recording') stopVoiceRecording();
+      }, 8_000);
+      notify('Listening for up to 8 seconds. Tap the microphone again to send sooner.');
+      return true;
+    } catch {
+      voiceRecorderRef.current = null;
+      stream.getTracks().forEach((track) => track.stop());
+      voiceStreamRef.current = null;
+      return false;
+    }
+  };
+
+  const startFallbackVoice = async () => {
+    const recordingStarted = await startRecordedSpeech();
+    if (recordingStarted) return;
+
+    const samsungVoice = listenSamsungVoiceInteraction();
+    if (samsungVoice.ok) {
+      setVoiceListening(false);
+      showAssistantActivity('Samsung voice commands active');
+      notify('Samsung Voice Interaction is active. It can navigate/select TV controls; free-form AI dictation requires microphone capture plus the configured speech service.');
+      return;
+    }
+
+    setVoiceListening(false);
+    showAssistantActivity('Microphone unavailable');
+    notify('This TV cannot provide microphone audio to the app. Check Settings → AI & Voice and the TV microphone permission; remote-mic speech may be available only through Samsung Voice Interaction.');
+  };
+
   const startVoiceInput = () => {
+    const nowMs = Date.now();
+    // Samsung can deliver the same microphone key to both document and window listeners.
+    if (nowMs - voiceActionAtRef.current < 650) return;
+    voiceActionAtRef.current = nowMs;
+
+    if (voiceRecorderRef.current?.state === 'recording') {
+      stopVoiceRecording();
+      return;
+    }
+
     type RecognitionResult = { 0?: { transcript?: string } };
     type RecognitionEvent = { results?: ArrayLike<RecognitionResult> };
     type Recognition = {
@@ -532,18 +670,12 @@ function App() {
       webkitSpeechRecognition?: RecognitionConstructor;
     };
     const Constructor = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+
     if (!Constructor) {
-      const samsungVoice = listenSamsungVoiceInteraction();
-      if (samsungVoice.ok) {
-        setVoiceListening(false);
-        showAssistantActivity('Samsung TV voice commands active');
-        notify('Samsung TV voice commands started. They support navigation and selection, not dictation into the AI text chat.');
-        return;
-      }
-      showAssistantActivity('Voice input is not supported here');
-      notify('This TV runtime exposes neither Web Speech recognition nor Samsung Voice Interaction. Text chat still works.');
+      void startFallbackVoice();
       return;
     }
+
     try {
       const recognition = new Constructor();
       recognition.lang = 'ru-RU';
@@ -557,8 +689,7 @@ function App() {
       };
       recognition.onerror = () => {
         setVoiceListening(false);
-        showAssistantActivity('Microphone unavailable');
-        notify('Microphone unavailable or speech could not be recognized.');
+        void startFallbackVoice();
       };
       recognition.onend = () => setVoiceListening(false);
       setAssistantActivityText('');
@@ -567,8 +698,7 @@ function App() {
       recognition.start();
     } catch {
       setVoiceListening(false);
-      showAssistantActivity('Microphone unavailable');
-      notify('Could not start speech recognition in this environment.');
+      void startFallbackVoice();
     }
   };
 

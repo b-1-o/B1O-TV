@@ -21,7 +21,9 @@ describe('B1O TV native-feeling service integration', () => {
     expect(player).toContain("'/api/playlists/'");
     expect(player).toContain("'/api/embed/media-tickets'");
     expect(player).toContain("'/api/stream/'");
+    expect(player).toContain("'/api/auth/logout'");
     expect(player).toContain("const createPlaylist = useCallback");
+    expect(player).toContain("setStreamUrl('');");
     expect(player).toContain("const addTrackToPlaylist = useCallback");
     expect(player).toContain('<audio');
   });

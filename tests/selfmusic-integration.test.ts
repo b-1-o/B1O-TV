@@ -11,7 +11,7 @@ describe('B1O TV native-feeling service integration', () => {
     expect(app).toContain("view === 'selfmusic'");
     expect(app).toContain('<SelfMusicPanel');
     expect(app).toContain("navigateToView('selfmusic')");
-    const launcherBranch = app.match(/if \(target === 'selfmusic'\) \{[\s\S]*?\n    \}/);
+    const launcherBranch = app.match(/if \(target === 'selfmusic'\) \{[\s\S]*?\n {4}\}/);
     expect(launcherBranch?.[0]).toContain("navigateToView('selfmusic')");
     expect(launcherBranch?.[0]).not.toContain('launchTVService');
 

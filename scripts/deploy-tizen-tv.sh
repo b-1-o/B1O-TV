@@ -27,10 +27,12 @@ fail() {
 [[ -x "$TIZEN_CLI" ]] || fail "Tizen CLI not found: $TIZEN_CLI. Set TIZEN_CLI or TIZEN_TOOLS."
 [[ -x "$SDB_CLI" ]] || fail "SDB not found: $SDB_CLI. Set SDB_CLI or TIZEN_TOOLS."
 [[ -f "$ROOT/public/config.xml" ]] || fail "Run this script from the B1web repository; public/config.xml is missing."
-[[ -x "$ROOT/node_modules/.bin/tsc" ]] || {
-  printf 'Dependencies not ready; installing locked dependencies...\n'
-  (cd "$ROOT" && npm ci --no-audit --no-fund)
-}
+if [[ ! -x "$ROOT/node_modules/.bin/tsc" || ! -f "$ROOT/node_modules/@noriginmedia/norigin-spatial-navigation/package.json" ]]; then
+  printf 'Dependencies are missing or incomplete; syncing package.json and package-lock.json...\n'
+  # npm install repairs stale local node_modules and updates an existing local lockfile.
+  # Use it rather than npm ci because this repository does not track a package-lock.json yet.
+  (cd "$ROOT" && npm install --no-audit --no-fund)
+fi
 
 command -v magick >/dev/null 2>&1 || command -v convert >/dev/null 2>&1 || fail "ImageMagick is required. On CachyOS/Arch run: sudo pacman -S imagemagick"
 mkdir -p "$OUT_DIR"

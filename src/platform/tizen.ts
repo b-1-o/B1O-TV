@@ -194,14 +194,28 @@ export function getInstalledApps(): Promise<InstalledTVApp[]> {
     manager.getAppsInfo(
       (apps) => {
         const normalized = apps
-          .filter((app) => typeof app.id === 'string' && typeof app.name === 'string')
+          .filter((app) => (
+            typeof app.id === 'string'
+            && typeof app.name === 'string'
+            && app.id !== 'B1Otv00001.B1web'
+            && app.name.toLocaleLowerCase('en-US') !== 'b1o tv'
+          ))
           .map((app) => ({
             id: app.id,
             name: app.name,
             iconPath: app.iconPath,
             version: app.version,
           }))
-          .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+          .sort((a, b) => {
+            const preferred = ['youtube', 'netflix', 'selfmusic', 'jellyfin', 'spotify', 'plex', 'prime video', 'disney', 'apple tv', 'hulu', 'twitch', 'browser', 'internet'];
+            const rank = (app: TizenApplicationInfo) => {
+              const text = (app.name + ' ' + app.id).toLocaleLowerCase('en-US');
+              const index = preferred.findIndex((hint) => text.includes(hint));
+              return index < 0 ? preferred.length : index;
+            };
+            const rankDifference = rank(a) - rank(b);
+            return rankDifference || a.name.localeCompare(b.name, 'ru');
+          });
         resolve(normalized);
       },
       () => resolve([]),

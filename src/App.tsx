@@ -59,6 +59,17 @@ const FEATURED_APPS: TVApp[] = [
   { id: 'browser', name: 'Browser', subtitle: 'Websites and web apps', category: 'Tools', symbol: 'WWW', target: 'browser' },
 ];
 
+// Safe demo data makes the TV-only app shelf and navigation previewable on a desktop browser.
+// These rows are never used on the actual Tizen runtime.
+const PREVIEW_INSTALLED_APPS: InstalledTVApp[] = [
+  { id: 'preview:tizentube', name: 'TizenTube', version: 'Preview' },
+  { id: 'preview:jellyfin', name: 'Jellyfin', version: 'Preview' },
+  { id: 'preview:selfmusic', name: 'SelfMusic', version: 'Preview' },
+  { id: 'preview:netflix', name: 'Netflix', version: 'Preview' },
+  { id: 'preview:primevideo', name: 'Prime Video', version: 'Preview' },
+  { id: 'preview:internet', name: 'Samsung Internet', version: 'Preview' },
+];
+
 function readSettings(): TVSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -197,7 +208,7 @@ function App() {
   }, []);
 
   const refreshInstalledApps = useCallback(async () => {
-    const apps = await getInstalledApps();
+    const apps = isTizenRuntime() ? await getInstalledApps() : PREVIEW_INSTALLED_APPS;
     setInstalledApps(apps);
     return apps;
   }, []);
@@ -468,6 +479,11 @@ function App() {
   }, [installedApps, notify, openAssistant, settings.jellyfinUrl, settings.selfMusicUrl]);
 
   const launchInstalledApp = useCallback((appId: string) => {
+    if (!isTizenRuntime()) {
+      const app = installedApps.find((item) => item.id === appId);
+      notify('Browser preview: ' + (app?.name ?? 'This app') + ' would launch on the TV. Native app launching requires Samsung Tizen.');
+      return;
+    }
     void launchInstalledAppById(appId, installedApps).then((result) => notify(result.message));
   }, [installedApps, notify]);
 
@@ -860,14 +876,14 @@ function App() {
             </div>
 
             {homeInstalledApps.length > 0 && (
-              <section className="section-block home-installed-section" aria-label="Installed TV apps">
+              <section className="section-block home-installed-section" aria-label={isTizenRuntime() ? "Installed TV apps" : "Preview app shelf"}>
                 <div className="section-heading">
-                  <div><span className="eyebrow small">READY TO LAUNCH</span><h2>On This TV</h2></div>
+                  <div><span className="eyebrow small">{isTizenRuntime() ? "READY TO LAUNCH" : "BROWSER PREVIEW · SAMPLE APPS"}</span><h2>{isTizenRuntime() ? "On This TV" : "Sample Apps"}</h2></div>
                   <TVButton className="text-action all-library-link" data-tv-focus="true" onClick={() => navigateToView('apps')}>All Apps <ArrowRight size={15} /></TVButton>
                 </div>
                 <CardGrid focusKey="HOME-INSTALLED-GRID" className="home-installed-apps">
                   {homeInstalledApps.map((app) => (
-                    <HomeInstalledAppCard key={app.id} app={app} onSelect={launchInstalledApp} />
+                    <HomeInstalledAppCard key={app.id} app={app} onSelect={launchInstalledApp} preview={!isTizenRuntime()} />
                   ))}
                 </CardGrid>
               </section>
@@ -890,9 +906,9 @@ function App() {
 
         {view === 'apps' && (
           <section className="page-section">
-            <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>Featured apps and apps detected on this TV.</p></div><label className="search-box glass-panel"><Search size={18} /><TVInput data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps…" /></label></div>
+            <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>{isTizenRuntime() ? "Featured apps and apps detected on this TV." : "Browser preview with sample TV apps. Native launch actions are available only on the TV."}</p></div><label className="search-box glass-panel"><Search size={18} /><TVInput data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps…" /></label></div>
             <div className="catalog-group"><h2>Featured Services <span>0{filteredApps.featured.length}</span></h2><CardGrid focusKey="APPS-FEATURED-GRID" className="app-catalog-grid">{filteredApps.featured.map((app) => <CatalogAppCard key={app.id} app={app} onLaunch={runApp} />)}</CardGrid></div>
-            <div className="catalog-group"><div className="catalog-group-heading"><h2>Installed on TV <span>{installedApps.length}</span></h2><TVButton className="secondary-button app-refresh-button" data-tv-focus="true" onClick={() => { void refreshInstalledApps().then(() => notify('TV app list refreshed.')); }}><RefreshCw size={15} /> Refresh TV apps</TVButton></div>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
+            <div className="catalog-group"><div className="catalog-group-heading"><h2>{isTizenRuntime() ? "Installed on TV" : "Sample apps · preview only"} <span>{installedApps.length}</span></h2><TVButton className="secondary-button app-refresh-button" data-tv-focus="true" onClick={() => { void refreshInstalledApps().then(() => notify('TV app list refreshed.')); }}><RefreshCw size={15} /> Refresh TV apps</TVButton></div>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
           </section>
         )}
 

@@ -2430,3 +2430,28 @@ button:disabled { transform: none; }
 .app-shell.tv-runtime .selfmusic-library { -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 .app-shell.tv-runtime .selfmusic-track-list { max-height: 44vh; }
 
+
+
+.home-installed-app.glass-panel {
+  border: 1px solid rgba(240,246,253,calc(.07 + var(--glass-intensity) * .08));
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(218,230,248,.055), transparent 68%),
+    linear-gradient(145deg, rgba(244,248,255,calc(.035 + var(--glass-intensity) * .045)), rgba(244,248,255,.01) 56%),
+    rgba(22,21,20,calc(.68 - var(--glass-intensity) * .1));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,calc(.05 + var(--glass-intensity) * .04)), 0 24px 54px rgba(0,0,0,.2);
+  -webkit-backdrop-filter: blur(calc(12px + var(--glass-intensity) * 11px)) saturate(112%);
+  backdrop-filter: blur(calc(12px + var(--glass-intensity) * 11px)) saturate(112%);
+}
+.home-installed-app.glass-panel:hover {
+  border-color: rgba(237,245,255,.24);
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(218,230,248,.075), transparent 68%),
+    linear-gradient(145deg, rgba(244,248,255,.075), rgba(244,248,255,.02) 56%),
+    rgba(22,21,20,.66);
+  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 28px 64px rgba(0,0,0,.27);
+}
+.home-installed-app.glass-panel.tv-focusable--focused {
+  border-color: rgba(237,245,255,.25);
+  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 15px 36px rgba(0,0,0,.29);
+}
+

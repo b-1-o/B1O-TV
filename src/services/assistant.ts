@@ -176,3 +176,53 @@ export async function askConfiguredAssistant(endpoint: string, message: string, 
 export function createAssistantMessage(role: AssistantMessage['role'], text: string): AssistantMessage {
   return { id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 7), role, text };
 }
+
+export function resolveTranscriptionEndpoint(endpoint: string): URL {
+  const url = resolveAssistantEndpoint(endpoint);
+  url.pathname = url.pathname.replace(/\/api\/assistant\/?$/, '/api/transcribe');
+  return url;
+}
+
+/** Transcribe a short microphone recording without storing it on the server. */
+export async function transcribeRecordedAudio(endpoint: string, audio: Blob, token: string): Promise<string> {
+  if (!token.trim()) {
+    throw new Error('Voice-to-text needs the Device token in Settings → AI & Voice. Samsung voice commands may still control the TV.');
+  }
+  if (!audio.size) throw new Error('No audio was recorded. Try the microphone again.');
+
+  const url = resolveTranscriptionEndpoint(endpoint);
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30_000);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + token.trim(),
+        'Content-Type': audio.type || 'application/octet-stream',
+      },
+      body: audio,
+      signal: controller.signal,
+    });
+    const data: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      if (response.status === 401) throw new Error('The device token does not match the Worker secret. Update it in Settings → AI & Voice.');
+      if (typeof data === 'object' && data !== null && 'error' in data && typeof data.error === 'string') {
+        throw new Error(data.error);
+      }
+      throw new Error('Speech-to-text service returned ' + response.status + '.');
+    }
+    if (typeof data === 'object' && data !== null && 'transcript' in data && typeof data.transcript === 'string' && data.transcript.trim()) {
+      return data.transcript.trim();
+    }
+    throw new Error('Speech-to-text service returned no transcript.');
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Speech recognition took too long. Try a shorter recording.');
+    }
+    if (error instanceof Error) throw error;
+    throw new Error('Could not reach the speech-to-text service.');
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+

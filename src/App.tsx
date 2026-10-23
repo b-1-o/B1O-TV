@@ -17,6 +17,7 @@ import {
   Moon,
   Music2,
   Play,
+  RefreshCw,
   Search,
   Settings2,
   Sparkles,
@@ -29,7 +30,7 @@ import {
 import type { ActiveTimer, AppTarget, AssistantMessage, InstalledTVApp, TVApp, TVSettings, View, WeatherSnapshot } from './types';
 import { createAssistantMessage, askConfiguredAssistant, formatDuration, parseLocalIntent, readSavedNotes, saveNote } from './services/assistant';
 import { describeWeather, fetchWeather } from './services/weather';
-import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
+import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, listenSamsungVoiceInteraction, registerSamsungVoiceInteraction, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
 import { CardGrid, FocusGroup } from './components/tv/CardGrid';
 import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
 import { useTheme } from './contexts/ThemeContext';
@@ -54,9 +55,9 @@ const WALLPAPERS = [
 
 
 const FEATURED_APPS: TVApp[] = [
-  { id: 'youtube', name: 'YouTube', subtitle: 'TV video client', category: 'Video', symbol: 'YT', target: 'youtube' },
+  { id: 'youtube', name: 'YouTube', subtitle: 'Separate ad-free TV client', category: 'Video', symbol: 'YT', target: 'youtube' },
   { id: 'jellyfin', name: 'Jellyfin', subtitle: 'Your home media library', category: 'Movies & TV', symbol: 'JF', target: 'jellyfin' },
-  { id: 'selfmusic', name: 'SelfMusic', subtitle: 'Your music, your way', category: 'Music', symbol: 'SM', target: 'selfmusic' },
+  { id: 'selfmusic', name: 'SelfMusic', subtitle: 'Connect your server in Settings', category: 'Music', symbol: 'SM', target: 'selfmusic' },
   { id: 'browser', name: 'Browser', subtitle: 'Websites and web apps', category: 'Tools', symbol: 'WWW', target: 'browser' },
 ];
 
@@ -173,6 +174,12 @@ function App() {
     toastTimer.current = window.setTimeout(() => setToast(''), 1_800);
   }, []);
 
+  const refreshInstalledApps = useCallback(async () => {
+    const apps = await getInstalledApps();
+    setInstalledApps(apps);
+    return apps;
+  }, []);
+
   useEffect(() => {
     const clock = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(clock);
@@ -223,20 +230,14 @@ function App() {
     };
   }, [settings.city]);
 
-  useEffect(() => {
-    let active = true;
-    void getInstalledApps().then((apps) => {
-      if (active) setInstalledApps(apps);
-    });
-    return () => { active = false; };
-  }, []);
+  useEffect(() => { void refreshInstalledApps(); }, [refreshInstalledApps]);
 
   useEffect(() => registerSpatialRemoteKeys(), []);
 
   useEffect(() => registerVoiceRemoteKey(() => {
-    setAssistantOpen(false);
     setAssistantClosing(false);
-    window.setTimeout(() => voiceStartRef.current(), 180);
+    setAssistantOpen(true);
+    voiceStartRef.current();
   }), []);
 
   useEffect(() => {
@@ -344,16 +345,11 @@ function App() {
 
   const startVoiceAssistant = () => {
     if (assistantCloseTimer.current !== undefined) window.clearTimeout(assistantCloseTimer.current);
-    const closeDelay = assistantOpen ? 300 : 160;
-    if (assistantOpen) {
-      closeAssistant();
-    } else {
-      setAssistantOpen(false);
-      setAssistantClosing(false);
-    }
+    setAssistantClosing(false);
+    setAssistantOpen(true);
     setAssistantActivityText('');
     if (assistantActivityTimer.current !== undefined) window.clearTimeout(assistantActivityTimer.current);
-    window.setTimeout(() => voiceStartRef.current(), closeDelay);
+    voiceStartRef.current();
   };
 
   const showAssistantActivity = (message: string) => {
@@ -505,8 +501,15 @@ function App() {
     };
     const Constructor = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
     if (!Constructor) {
+      const samsungVoice = listenSamsungVoiceInteraction();
+      if (samsungVoice.ok) {
+        setVoiceListening(false);
+        showAssistantActivity('Samsung TV voice commands active');
+        notify('Samsung TV voice commands started. They support navigation and selection, not dictation into the AI text chat.');
+        return;
+      }
       showAssistantActivity('Voice input is not supported here');
-      notify('Voice input is not supported in this browser. On TV, check microphone permissions and firmware support.');
+      notify('This TV runtime exposes neither Web Speech recognition nor Samsung Voice Interaction. Text chat still works.');
       return;
     }
     try {
@@ -538,6 +541,34 @@ function App() {
   };
 
   voiceStartRef.current = startVoiceInput;
+
+  useEffect(() => registerSamsungVoiceInteraction({
+    getState: () => assistantOpen ? 'Search' : view === 'home' ? 'Home' : view === 'settings' ? 'Setting' : 'List',
+    onNavigate: (navigation) => {
+      const key = ({ NAV_LEFT: 'ArrowLeft', NAV_RIGHT: 'ArrowRight', NAV_UP: 'ArrowUp', NAV_DOWN: 'ArrowDown', NAV_NEXT: 'ArrowRight', NAV_PREVIOUS: 'ArrowLeft' } as Record<string, string>)[navigation];
+      if (navigation === 'NAV_SHOW_MORE') { navigateToView('apps'); return true; }
+      if (!key) return false;
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      return true;
+    },
+    onSelect: (selection) => {
+      const controls = Array.from(document.querySelectorAll<HTMLElement>('[data-tv-focus="true"]'))
+        .filter((element) => !('disabled' in element && Boolean((element as HTMLButtonElement).disabled)) && element.getClientRects().length > 0);
+      const focused = document.querySelector<HTMLElement>('[data-tv-focused="true"]');
+      if (selection === 0) { if (!focused) return false; focused.click(); return true; }
+      const index = selection === -1 ? controls.length - 1 : selection > 0 ? Math.min(controls.length - 1, selection - 1) : -1;
+      if (index < 0 || !controls[index]) return false;
+      controls[index].click();
+      return true;
+    },
+    onAppState: (state) => {
+      if (state === 'Home') { navigateToView('home'); return true; }
+      if (state === 'List') { navigateToView('apps'); return true; }
+      if (state === 'Setting') { navigateToView('settings'); return true; }
+      if (state === 'Search') { openAssistant(); return true; }
+      return false;
+    },
+  }), [assistantOpen, navigateToView, openAssistant, view]);
 
   const filteredApps = useMemo(() => {
     const value = search.trim().toLocaleLowerCase('en-US');
@@ -662,7 +693,7 @@ function App() {
           <section className="page-section">
             <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>Featured apps and apps detected on this TV.</p></div><label className="search-box glass-panel"><Search size={18} /><TVInput data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps…" /></label></div>
             <div className="catalog-group"><h2>Featured Services <span>0{filteredApps.featured.length}</span></h2><CardGrid focusKey="APPS-FEATURED-GRID" className="app-catalog-grid">{filteredApps.featured.map((app) => <CatalogAppCard key={app.id} app={app} onLaunch={runApp} />)}</CardGrid></div>
-            <div className="catalog-group"><h2>Installed on TV <span>{installedApps.length}</span></h2>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
+            <div className="catalog-group"><div className="catalog-group-heading"><h2>Installed on TV <span>{installedApps.length}</span></h2><TVButton className="secondary-button app-refresh-button" data-tv-focus="true" onClick={() => { void refreshInstalledApps().then(() => notify('TV app list refreshed.')); }}><RefreshCw size={15} /> Refresh TV apps</TVButton></div>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
           </section>
         )}
 
@@ -694,7 +725,7 @@ function App() {
             <div className="settings-grid">
               <section className="settings-card glass-panel"><div className="settings-card-head"><Cloud /><div><h2>Weather</h2><p>Choose the location and temperature units shown on Home.</p></div></div><label className="field-label">City<TVInput data-tv-focus="true" value={settings.city} onChange={(event) => updateSetting('city', event.target.value)} placeholder="Los Angeles" /></label><label className="field-label">Temperature units<TVSelect data-tv-focus="true" value={settings.temperatureUnit} onChange={(event) => updateSetting('temperatureUnit', event.target.value === 'C' ? 'C' : 'F')}><option value="F">Fahrenheit (°F)</option><option value="C">Celsius (°C)</option></TVSelect></label><p className="field-help">Current conditions are provided by Open-Meteo. Location access is not requested automatically.</p></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Appearance</h2><p>Theme, wallpaper, and floating navigation material.</p></div></div><div className="theme-setting-row"><span><strong>Color theme</strong><small>Saved automatically and restored on launch.</small></span><TVButton className="secondary-button theme-toggle-button" data-tv-focus="true" aria-label={'Switch to ' + (mode === 'dark' ? 'light' : 'dark') + ' theme'} onClick={toggleTheme}>{mode === 'dark' ? <Moon size={17} /> : <Sun size={17} />} {mode === 'dark' ? 'Dark theme' : 'Light theme'}</TVButton></div><label className="field-label">Liquid Glass intensity <strong>{settings.glassIntensity}%</strong><TVInput data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Reduce motion</strong><small>Disables non-essential animations.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="https://jellyfin.example.com" /></label><label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="https://music.example.com" /></label><p className="field-help">Links are saved locally. Each server must permit access from the TV browser.</p></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="https://jellyfin.example.com" /></label><label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="https://music.example.com" /></label><p className="field-help">Set the exact URL where SelfMusic is running. HTTPS is preferred; HTTP is allowed for localhost, private LAN, and Tailscale addresses.</p></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI & Voice</h2><p>Connect your backend endpoint. Keep model API keys on the server.</p></div></div><label className="field-label">AI backend endpoint<TVInput data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Device token<TVInput data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Your Cloudflare Worker token" /></label><p className="field-help">This is the device access token, not the model API key. It stays in local app storage. The endpoint accepts message/history JSON and returns a reply.</p><label className="check-row"><span><strong>Speak replies aloud</strong><small>Requires Speech Synthesis support in this Tizen browser.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><TVButton className="secondary-button test-voice-button" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={17} /> Test Voice Assistant <ArrowRight size={15} /></TVButton></section>
             </div>
             <section className="settings-card glass-panel setup-transfer-card"><div className="settings-card-head"><Download /><div><h2>PC → TV Setup</h2><p>Configure everything here, then transfer your setup to the TV.</p></div></div><div className="setup-transfer-actions"><TVButton className="primary-button" data-tv-focus="true" onClick={exportTVSetup}><Download size={17} /> Export TV Setup</TVButton><TVButton className="secondary-button" data-tv-focus="true" onClick={() => setupImportRef.current?.click()}><Upload size={17} /> Import TV Setup</TVButton><input ref={setupImportRef} className="visually-hidden" type="file" accept="application/json,.json" aria-label="Import a B1O TV setup file" onChange={(event) => importTVSetup(event.target.files?.[0])} /></div><p className="field-help">Export creates b1o-tv-setup.json with your city, wallpaper, service URLs, temperature unit, AI endpoint, and device token. On the TV, open Settings → Import TV Setup and choose the same file. Keep it private because it contains your device token.</p></section>
@@ -707,7 +738,7 @@ function App() {
         <TVButton focusKey="DOCK-jellyfin" className="dock-item" data-tv-focus="true" onClick={() => void runApp('jellyfin')}><Film size={19} /><span>Jellyfin</span></TVButton>
         <TVButton focusKey="DOCK-selfmusic" className="dock-item" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Music2 size={19} /><span>SelfMusic</span></TVButton>
         <TVButton focusKey="DOCK-settings" className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => navigateToView('settings')}><Settings2 size={19} /><span>Settings</span></TVButton>
-        <TVButton focusKey="DOCK-assistant" className="dock-item dock-assistant" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={19} /><span>Assistant</span></TVButton>
+        <TVButton focusKey="DOCK-assistant" className="dock-item dock-assistant" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={19} /><span>Voice / AI</span></TVButton>
       </nav>
 
       {assistantOpen && (
@@ -720,7 +751,7 @@ function App() {
               {assistantBusy && <div className="chat-message assistant"><span className="chat-avatar"><Sparkles size={15} /></span><p className="typing-indicator"><i /><i /><i /></p></div>}
             </div>
             <div className="assistant-input-area"><TVButton className={'voice-button' + (voiceListening ? ' listening' : '')} data-tv-focus="true" onClick={startVoiceAssistant} aria-label="Start voice input">{voiceListening ? <LoaderCircle className="spin" /> : <Mic />}</TVButton><form className="assistant-form" onSubmit={(event) => { event.preventDefault(); void submitAssistant(); }}><TVInput data-tv-focus="true" data-assistant-input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask anything…" aria-label="Message the assistant" /><TVButton data-tv-focus="true" disabled={!draft.trim() || assistantBusy} aria-label="Send message"><ArrowRight /></TVButton></form></div>
-            <div className="assistant-footnote"><Volume2 size={13} /> Press Alt + V to open the chat in the browser preview. The physical microphone button depends on TV firmware and API support.</div>
+            <div className="assistant-footnote"><Volume2 size={13} /> Browser preview: Alt + V. Samsung Voice Interaction can navigate and select; free-form dictation depends on SpeechRecognition support.</div>
           </FocusGroup>
         </div>
       )}

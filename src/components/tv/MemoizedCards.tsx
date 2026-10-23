@@ -111,11 +111,9 @@ export const InstalledAppRow = memo(function InstalledAppRow({
 export const HomeInstalledAppCard = memo(function HomeInstalledAppCard({
   app,
   onSelect,
-  preview = false,
 }: {
   app: InstalledTVApp;
   onSelect: (appId: string) => void;
-  preview?: boolean;
 }) {
   const handleSelect = useCallback(() => onSelect(app.id), [app.id, onSelect]);
   const iconUrl = app.iconPath?.startsWith('/') ? 'file://' + app.iconPath : app.iconPath;
@@ -123,7 +121,7 @@ export const HomeInstalledAppCard = memo(function HomeInstalledAppCard({
   return (
     <TVButton
       focusKey={'HOME-INSTALLED-' + app.id}
-      className="home-installed-app"
+      className="home-installed-app glass-panel"
       data-tv-focus="true"
       aria-label={'Open ' + app.name}
       onClick={handleSelect}
@@ -132,7 +130,7 @@ export const HomeInstalledAppCard = memo(function HomeInstalledAppCard({
         <Grid2X2 className="home-app-fallback" />
         {iconUrl ? <img src={iconUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : null}
       </span>
-      <span className="home-app-copy"><strong>{app.name}</strong><small>{preview ? "Preview only" : "Installed on TV"}</small></span>
+      <span className="home-app-copy"><strong>{app.name}</strong><small>Installed on TV</small></span>
       <ArrowRight size={17} />
     </TVButton>
   );

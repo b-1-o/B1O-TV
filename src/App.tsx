@@ -707,8 +707,20 @@ function App() {
   useEffect(() => registerSamsungVoiceInteraction({
     getState: () => assistantOpen ? 'Search' : view === 'home' ? 'Home' : view === 'settings' ? 'Setting' : 'List',
     onNavigate: (navigation) => {
-      const key = ({ NAV_LEFT: 'ArrowLeft', NAV_RIGHT: 'ArrowRight', NAV_UP: 'ArrowUp', NAV_DOWN: 'ArrowDown', NAV_NEXT: 'ArrowRight', NAV_PREVIOUS: 'ArrowLeft' } as Record<string, string>)[navigation];
       if (navigation === 'NAV_SHOW_MORE') { navigateToView('apps'); return true; }
+      if (navigation === 'NAV_PREVIOUS') {
+        if (assistantOpen) { closeAssistant(); return true; }
+        if (forecastOpen) { setForecastOpen(false); return true; }
+        if (view !== 'home') { navigateToView('home'); return true; }
+        return false;
+      }
+      const key = ({
+        NAV_LEFT: 'ArrowLeft',
+        NAV_RIGHT: 'ArrowRight',
+        NAV_UP: 'ArrowUp',
+        NAV_DOWN: 'ArrowDown',
+        NAV_NEXT: 'ArrowRight',
+      } as Record<string, string>)[navigation];
       if (!key) return false;
       document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
       return true;
@@ -730,7 +742,7 @@ function App() {
       if (state === 'Search') { openAssistant(); return true; }
       return false;
     },
-  }), [assistantOpen, navigateToView, openAssistant, view]);
+  }), [assistantOpen, closeAssistant, forecastOpen, navigateToView, openAssistant, view]);
 
   const filteredApps = useMemo(() => {
     const value = search.trim().toLocaleLowerCase('en-US');

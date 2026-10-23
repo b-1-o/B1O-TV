@@ -260,8 +260,10 @@ export function launchInstalledAppById(
   });
 }
 
+const TIZEN_TUBE_APP_ID = 'Ad6NutHP8l.TizenTube';
+
 const appNameMatchers: Record<Exclude<AppTarget, 'assistant'>, RegExp> = {
-  youtube: /youtube\s*for\s*tizen|tizen\s*tube|tube\s*for\s*tizen|tizen-youtube|tUb3Xq7Lm9/i,
+  youtube: /youtube\s*for\s*tizen|tizen\s*tube|tube\s*for\s*tizen|tizen-youtube|tUb3Xq7Lm9|Ad6NutHP8l\.TizenTube/i,
   jellyfin: /jellyfin/i,
   selfmusic: /self\s*music|selfmusic/i,
   browser: /internet|browser|браузер/i,
@@ -277,6 +279,42 @@ export async function launchTVService(
   const matcher = appNameMatchers[target];
   const app = installedApps.find((item) => matcher.test(item.name) || matcher.test(item.id));
   const manager = window.tizen?.application;
+
+  // Use the exact app ID even if Samsung's installed-app catalogue omits its display name.
+  if (target === 'youtube' && isTizenRuntime() && manager?.launch) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result: { ok: boolean; message: string }) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        resolve(result);
+      };
+      const timeout = window.setTimeout(() => finish({
+        ok: false,
+        message: 'TizenTube did not respond to the launch request. Check that it is installed and try again.',
+      }), 6000);
+
+      try {
+        manager.launch(
+          TIZEN_TUBE_APP_ID,
+          () => finish({
+            ok: true,
+            message: 'TizenTube launched. Its ad-filtering/SponsorBlock features may require the companion TIZEN-TUBE server or launcher.',
+          }),
+          (error) => finish({
+            ok: false,
+            message: 'Could not launch TizenTube (' + (error?.message || error?.name || 'unknown error') + '). Check that ' + TIZEN_TUBE_APP_ID + ' is installed. Ad-filtering features may require the companion TIZEN-TUBE server/launcher.',
+          }),
+        );
+      } catch (error) {
+        finish({
+          ok: false,
+          message: 'TizenTube could not be launched: ' + (error instanceof Error ? error.message : 'Tizen API is unavailable.'),
+        });
+      }
+    });
+  }
 
   if (app && manager?.launch) {
     return new Promise((resolve) => {

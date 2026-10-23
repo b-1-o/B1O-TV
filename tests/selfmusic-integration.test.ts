@@ -21,6 +21,8 @@ describe('B1O TV native-feeling service integration', () => {
     expect(player).toContain("'/api/playlists/'");
     expect(player).toContain("'/api/embed/media-tickets'");
     expect(player).toContain("'/api/stream/'");
+    expect(player).toContain("const createPlaylist = useCallback");
+    expect(player).toContain("const addTrackToPlaylist = useCallback");
     expect(player).toContain('<audio');
   });
 
@@ -45,6 +47,9 @@ describe('B1O TV native-feeling service integration', () => {
     expect(css).toContain('.selfmusic-now-playing,');
     expect(css).toContain('.selfmusic-track-select.tv-focusable--focused');
     expect(css).toContain('.home-installed-app.glass-panel');
+    expect(css).toContain('.selfmusic-playlist-create');
+    expect(css).toContain('.selfmusic-playlist-picker');
+    expect(css).toContain('.selfmusic-origin-warning');
     expect(css).toContain('@media (prefers-reduced-motion: reduce)');
   });
 });

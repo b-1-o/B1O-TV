@@ -15,6 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Validate Tizen scripts and manifest
+        run: |
+          bash -n scripts/deploy-tizen-tv.sh
+          node --check scripts/optimize-tv-assets.mjs
+          python3 -c 'import xml.etree.ElementTree as ET; ET.parse("public/config.xml")'
       - uses: actions/setup-node@v4
         with:
           node-version: 22

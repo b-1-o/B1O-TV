@@ -5,15 +5,19 @@ interface ChatMessage {
   content: string;
 }
 
+interface AIInput {
+  messages?: ChatMessage[];
+  max_tokens?: number;
+  temperature?: number;
+  audio?: string;
+  task?: "transcribe" | "translate";
+  language?: string;
+  vad_filter?: boolean;
+  initial_prompt?: string;
+}
+
 interface AIBinding {
-  run(
-    model: string,
-    input: {
-      messages: ChatMessage[];
-      max_tokens: number;
-      temperature: number;
-    },
-  ): Promise<unknown>;
+  run(model: string, input: AIInput): Promise<unknown>;
 }
 
 interface Env {
@@ -41,6 +45,16 @@ const JSON_HEADERS = {
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
   "Access-Control-Max-Age": "86400"
 };
+
+function bufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -87,6 +101,9 @@ function extractAIText(value: unknown, depth = 0): string {
   const outputText = textContent(output.output_text);
   if (outputText) return outputText;
 
+  const directText = textContent(output.text);
+  if (directText) return directText;
+
   if (Array.isArray(output.choices)) {
     for (const entry of output.choices) {
       if (typeof entry !== "object" || entry === null) continue;
@@ -129,11 +146,53 @@ export default {
       return json({
         ok: true,
         service: "B1O TV Assistant",
-        endpoints: { health: "/health", assistant: "/api/assistant" }
+        endpoints: { health: "/health", assistant: "/api/assistant", transcribe: "/api/transcribe" }
       });
     }
     if (url.pathname === "/health" && request.method === "GET") {
       return json({ ok: true, service: "B1O TV Assistant" });
+    }
+
+    if (url.pathname === "/api/transcribe") {
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+      const expectedToken = env.ASSISTANT_TOKEN;
+      if (!expectedToken || expectedToken.length < 24) {
+        return json({ error: "Assistant is not configured. Set the ASSISTANT_TOKEN secret." }, 503);
+      }
+      const authorization = request.headers.get("Authorization") || "";
+      if (!sameToken(authorization, "Bearer " + expectedToken)) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+
+      const contentType = (request.headers.get("Content-Type") || "").toLowerCase();
+      if (!contentType.startsWith("audio/") && contentType !== "application/octet-stream") {
+        return json({ error: "Send a recorded audio file with an audio/* content type." }, 415);
+      }
+      let audioBuffer: ArrayBuffer;
+      try {
+        audioBuffer = await request.arrayBuffer();
+      } catch {
+        return json({ error: "Could not read the recorded audio." }, 400);
+      }
+      if (audioBuffer.byteLength < 512) return json({ error: "No usable audio was recorded. Try holding the microphone closer or speak longer." }, 400);
+      if (audioBuffer.byteLength > 5 * 1024 * 1024) return json({ error: "Audio is too large. Record a shorter message (up to 8 seconds)." }, 413);
+
+      try {
+        const audio = bufferToBase64(audioBuffer);
+        const output = await env.AI.run("@cf/openai/whisper-large-v3-turbo", {
+          audio,
+          task: "transcribe",
+          language: "ru",
+          vad_filter: true,
+          initial_prompt: "B1O TV, SelfMusic, YouTube, Jellyfin, Samsung Tizen. Russian or English speech."
+        });
+        const transcript = extractAIText(output).trim();
+        if (!transcript) return json({ error: "Speech recognition returned no text. Try again." }, 422);
+        return json({ transcript: transcript.slice(0, 2_000) });
+      } catch {
+        // Do not store or log audio, transcripts, or user speech.
+        return json({ error: "Speech recognition is temporarily unavailable." }, 502);
+      }
     }
     if (url.pathname !== "/api/assistant") return json({ error: "Not found" }, 404);
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);

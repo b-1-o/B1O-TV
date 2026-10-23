@@ -39,7 +39,7 @@ async function optimizeImage(file) {
 let savedBytes = 0;
 let optimizedCount = 0;
 for (const name of await readdir(assets)) {
-  if (!/\\.(jpe?g)$/i.test(name)) continue;
+  if (!/\.(jpe?g)$/i.test(name)) continue;
   const saved = await optimizeImage(join(assets, name));
   if (saved > 0) { optimizedCount += 1; savedBytes += saved; }
 }

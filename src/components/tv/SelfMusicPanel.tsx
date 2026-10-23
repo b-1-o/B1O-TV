@@ -414,11 +414,14 @@ export function SelfMusicPanel({
     setStatusMessage('');
     setIsPlaying(false);
     try {
-      const [ticket, artTicket] = await Promise.all([
-        createMediaTicket('stream', track.id),
-        createMediaTicket('artwork', track.id),
-      ]);
-      setImageTickets((previous) => ({ ...previous, [track.id]: artTicket }));
+      const ticket = await createMediaTicket('stream', track.id);
+      let artTicket = '';
+      try {
+        artTicket = await createMediaTicket('artwork', track.id);
+      } catch {
+        // Artwork is optional; a missing cover must never block audio playback.
+      }
+      if (artTicket) setImageTickets((previous) => ({ ...previous, [track.id]: artTicket }));
       setCurrentTrackId(track.id);
       setStreamUrl(normalizedUrl + '/api/stream/' + encodeURIComponent(track.id) + '?ticket=' + encodeURIComponent(ticket));
       setDuration(track.duration);

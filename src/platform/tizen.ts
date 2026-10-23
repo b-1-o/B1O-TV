@@ -337,10 +337,13 @@ export async function launchTVService(
   }
 
   if (!isTizenRuntime()) {
-    return {
-      ok: false,
-      message: 'This is a browser preview. On TV, install the app or check the Tizen app catalog.',
+    const previewMessages: Record<Exclude<AppTarget, 'assistant'>, string> = {
+      youtube: 'Browser preview: the TizenTube tile is interactive, but launching ' + TIZEN_TUBE_APP_ID + ' requires the Samsung Tizen runtime.',
+      jellyfin: 'Set the Jellyfin URL in Settings → Media Services to open your server in this browser preview.',
+      selfmusic: 'Set the SelfMusic URL in Settings → Media Services to open the normal SelfMusic sign-in page.',
+      browser: 'Browser preview: the Internet app can only be launched on a Samsung Tizen TV.',
     };
+    return { ok: false, message: previewMessages[target] };
   }
 
   if (target === 'youtube') {

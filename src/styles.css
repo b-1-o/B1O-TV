@@ -1698,3 +1698,57 @@ button:disabled { transform: none; }
 @media (max-width: 600px) {
   .theme-setting-row { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* Samsung TV fast path: no white focus outline, no entrance blur, lighter redraws. */
+.app-shell.tv-runtime::before { inset: 0; filter: none !important; transform: none !important; }
+.app-shell.tv-runtime .ambient { display: none !important; animation: none !important; filter: none !important; }
+.app-shell.tv-runtime .main-content.transition-enter,
+.app-shell.tv-runtime .main-content.transition-exit,
+.app-shell.tv-runtime .transition-enter .page-section,
+.app-shell.tv-runtime .transition-enter .home-stage,
+.app-shell.tv-runtime .transition-enter .featured-section,
+.app-shell.tv-runtime .transition-enter .wallpaper-library,
+.app-shell.tv-runtime .transition-enter .settings-card,
+.app-shell.tv-runtime .transition-enter .featured-card,
+.app-shell.tv-runtime .transition-enter .catalog-card,
+.app-shell.tv-runtime .transition-enter .library-card,
+.app-shell.tv-runtime .transition-enter .wallpaper-choice,
+.app-shell.tv-runtime .topbar,
+.app-shell.tv-runtime .floating-dock {
+  animation: none !important;
+  filter: none !important;
+}
+.app-shell.tv-runtime .dynamic-island .island-status-icon,
+.app-shell.tv-runtime .dynamic-island .island-wave i { animation: none !important; }
+.app-shell.tv-runtime button,
+.app-shell.tv-runtime a,
+.app-shell.tv-runtime input,
+.app-shell.tv-runtime select,
+.app-shell.tv-runtime [tabindex] {
+  transition: transform .12s ease-out !important;
+  will-change: auto !important;
+}
+.app-shell.tv-runtime [data-tv-focused="true"] {
+  outline: none !important;
+  box-shadow: 0 10px 24px rgba(0,0,0,.34) !important;
+  filter: none !important;
+}
+.app-shell.tv-runtime .featured-card[data-tv-focused="true"],
+.app-shell.tv-runtime .catalog-card[data-tv-focused="true"],
+.app-shell.tv-runtime .installed-row[data-tv-focused="true"],
+.app-shell.tv-runtime .wallpaper-choice[data-tv-focused="true"] {
+  box-shadow: 0 14px 28px rgba(0,0,0,.42) !important;
+}
+.app-shell.tv-runtime .dock-item[data-tv-focused="true"],
+.app-shell.tv-runtime .icon-button[data-tv-focused="true"],
+.app-shell.tv-runtime .small-icon-button[data-tv-focused="true"],
+.app-shell.tv-runtime .text-action[data-tv-focused="true"],
+.app-shell.tv-runtime .island-main[data-tv-focused="true"],
+.app-shell.tv-runtime .voice-button[data-tv-focused="true"] {
+  box-shadow: none !important;
+}
+.app-shell.tv-runtime .wallpaper-choice.selected { border-color: rgba(255,255,255,.18) !important; }
+.catalog-group-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:15px; }
+.catalog-group-heading h2 { margin: 0; }
+.app-refresh-button { min-height:42px; padding:0 15px; }

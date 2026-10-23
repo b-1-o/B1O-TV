@@ -917,7 +917,17 @@ function App() {
           <section className="page-section">
             <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>{isTizenRuntime() ? "Featured services and apps detected on this TV." : "Test the built-in services here. Native app discovery and TV app launches are available only on Samsung Tizen."}</p></div><label className="search-box glass-panel"><Search size={18} /><TVInput data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps…" /></label></div>
             <div className="catalog-group"><h2>Featured Services <span>0{filteredApps.featured.length}</span></h2><CardGrid focusKey="APPS-FEATURED-GRID" className="app-catalog-grid">{filteredApps.featured.map((app) => <CatalogAppCard key={app.id} app={app} onLaunch={runApp} />)}</CardGrid></div>
-            <div className="catalog-group"><div className="catalog-group-heading"><h2>Installed on TV <span>{installedApps.length}</span></h2><TVButton className="secondary-button app-refresh-button" data-tv-focus="true" onClick={() => { void refreshInstalledApps().then(() => notify('TV app list refreshed.')); }}><RefreshCw size={15} /> Refresh TV apps</TVButton></div>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Installed apps are TV-only'}</strong><span>No fake app entries are shown in the browser preview. When B1O TV runs on Samsung Tizen, this list is populated from the TV app catalogue.</span></div>}</div>
+            {isTizenRuntime() && (
+              <div className="catalog-group">
+                <div className="catalog-group-heading">
+                  <h2>Installed on TV <span>{installedApps.length}</span></h2>
+                  <TVButton className="secondary-button app-refresh-button" data-tv-focus="true" onClick={() => { void refreshInstalledApps().then(() => notify('TV app list refreshed.')); }}><RefreshCw size={15} /> Refresh TV apps</TVButton>
+                </div>
+                {installedApps.length
+                  ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid>
+                  : <div className="empty-state glass-panel"><Info /><strong>App list unavailable</strong><span>Samsung Tizen has not returned an installed-app list. Check the application.info privilege and try refreshing.</span></div>}
+              </div>
+            )}
           </section>
         )}
 

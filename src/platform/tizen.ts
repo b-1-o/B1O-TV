@@ -260,7 +260,11 @@ export function launchInstalledAppById(
   });
 }
 
-const TIZEN_TUBE_APP_ID = 'Ad6NutHP8l.TizenTube';
+// TizenTube's app ID changed between older releases and the current standalone release.
+const TIZEN_TUBE_APP_IDS = [
+  'xvvl3S1TT1.TizenTubeStandalone',
+  'Ad6NutHP8l.TizenTube',
+] as const;
 
 const appNameMatchers: Record<Exclude<AppTarget, 'assistant'>, RegExp> = {
   youtube: /youtube\s*for\s*tizen|tizen\s*tube|tube\s*for\s*tizen|tizen-youtube|tUb3Xq7Lm9|Ad6NutHP8l\.TizenTube/i,
@@ -280,10 +284,18 @@ export async function launchTVService(
   const app = installedApps.find((item) => matcher.test(item.name) || matcher.test(item.id));
   const manager = window.tizen?.application;
 
-  // Use the exact app ID even if Samsung's installed-app catalogue omits its display name.
+  // Prefer the actual installed app ID. Fall back to known standalone IDs only
+  // when Tizen's installed-app catalogue omits TizenTube from its results.
   if (target === 'youtube' && isTizenRuntime() && manager?.launch) {
+    const candidates = [...new Set([
+      app?.id,
+      ...TIZEN_TUBE_APP_IDS,
+    ].filter((id): id is string => Boolean(id)))];
+
     return new Promise((resolve) => {
       let settled = false;
+      let candidateIndex = 0;
+      let lastLaunchError = 'unknown error';
       const finish = (result: { ok: boolean; message: string }) => {
         if (settled) return;
         settled = true;
@@ -295,24 +307,35 @@ export async function launchTVService(
         message: 'TizenTube did not respond to the launch request. Check that it is installed and try again.',
       }), 6000);
 
-      try {
-        manager.launch(
-          TIZEN_TUBE_APP_ID,
-          () => finish({
-            ok: true,
-            message: 'TizenTube launched. Its ad-filtering/SponsorBlock features may require the companion TIZEN-TUBE server or launcher.',
-          }),
-          (error) => finish({
+      const launchNext = () => {
+        const candidate = candidates[candidateIndex];
+        if (!candidate) {
+          finish({
             ok: false,
-            message: 'Could not launch TizenTube (' + (error?.message || error?.name || 'unknown error') + '). Check that ' + TIZEN_TUBE_APP_ID + ' is installed. Ad-filtering features may require the companion TIZEN-TUBE server/launcher.',
-          }),
-        );
-      } catch (error) {
-        finish({
-          ok: false,
-          message: 'TizenTube could not be launched: ' + (error instanceof Error ? error.message : 'Tizen API is unavailable.'),
-        });
-      }
+            message: 'Could not launch TizenTube. Install the standalone TizenTube app and refresh the installed-app list. Last error: ' + lastLaunchError,
+          });
+          return;
+        }
+        candidateIndex += 1;
+        try {
+          manager.launch(
+            candidate,
+            () => finish({
+              ok: true,
+              message: 'TizenTube launched.',
+            }),
+            (error) => {
+              lastLaunchError = error?.message || error?.name || 'unknown error';
+              launchNext();
+            },
+          );
+        } catch (error) {
+          lastLaunchError = error instanceof Error ? error.message : 'Tizen API error';
+          launchNext();
+        }
+      };
+
+      launchNext();
     });
   }
 
@@ -338,7 +361,7 @@ export async function launchTVService(
 
   if (!isTizenRuntime()) {
     const previewMessages: Record<Exclude<AppTarget, 'assistant'>, string> = {
-      youtube: 'Browser preview: the TizenTube tile is interactive, but launching ' + TIZEN_TUBE_APP_ID + ' requires the Samsung Tizen runtime.',
+      youtube: 'Browser preview: the TizenTube tile is interactive, but launching TizenTube requires the Samsung Tizen runtime.',
       jellyfin: 'Set the Jellyfin URL in Settings → Media Services to open your server in this browser preview.',
       selfmusic: 'Set the SelfMusic URL in Settings → Media Services to open the normal SelfMusic sign-in page.',
       browser: 'Browser preview: the Internet app can only be launched on a Samsung Tizen TV.',
@@ -349,7 +372,7 @@ export async function launchTVService(
   if (target === 'youtube') {
     return {
       ok: false,
-      message: 'YouTube for Tizen is not installed. Install it separately using the project guide at github.com/SushyDev/tizen-youtube, then open Apps → Refresh TV apps.',
+      message: 'TizenTube is not installed. Install the standalone TizenTube app for your TV, then open Apps → Refresh TV apps.',
     };
   }
 

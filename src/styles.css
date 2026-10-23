@@ -1949,3 +1949,24 @@ button:disabled { transform: none; }
 .app-shell.tv-runtime .glass-panel {
   background-color: rgba(18, 21, 27, .96);
 }
+
+
+/* On Tizen, suppress both native focus-visible and library focus outlines.
+   The active tile is indicated by its fill/position, never a bright white frame. */
+.app-shell.tv-runtime button:focus-visible,
+.app-shell.tv-runtime a:focus-visible,
+.app-shell.tv-runtime input:focus-visible,
+.app-shell.tv-runtime select:focus-visible,
+.app-shell.tv-runtime [tabindex]:focus-visible,
+.app-shell.tv-runtime [data-tv-focus="true"]:focus,
+.app-shell.tv-runtime [data-tv-focus="true"]:focus-visible {
+  outline: none !important;
+}
+.app-shell.tv-runtime button:focus-visible,
+.app-shell.tv-runtime a:focus-visible,
+.app-shell.tv-runtime input:focus-visible,
+.app-shell.tv-runtime select:focus-visible,
+.app-shell.tv-runtime [tabindex]:focus-visible {
+  outline-color: transparent !important;
+  -webkit-tap-highlight-color: transparent;
+}

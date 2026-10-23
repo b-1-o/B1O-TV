@@ -187,11 +187,16 @@ button:disabled { cursor: not-allowed; opacity: .4; }
   min-height: 172px;
   padding: 26px clamp(20px, 2.2vw, 34px);
   overflow: hidden;
-  border-color: rgba(240, 246, 253, .105);
+  border: 1px solid rgba(240,246,253,calc(.07 + var(--glass-intensity) * .08));
   border-radius: 30px;
-  background: radial-gradient(ellipse at 8% 0%, rgba(218,230,248,.095), transparent 58%), linear-gradient(145deg, rgba(244,248,255,.055), rgba(244,248,255,.01) 62%), rgba(18,18,17,.7);
-  box-shadow: inset 0 1px rgba(255,255,255,.075), 0 26px 72px rgba(0,0,0,.24);
-  transition: padding .42s ease, border-radius .42s ease, background .3s ease, box-shadow .3s ease;
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(218,230,248,.075), transparent 58%),
+    linear-gradient(145deg, rgba(244,248,255,calc(.035 + var(--glass-intensity) * .045)), rgba(244,248,255,.01) 56%),
+    rgba(22,21,20,calc(.68 - var(--glass-intensity) * .1));
+  box-shadow: inset 0 1px rgba(255,255,255,calc(.05 + var(--glass-intensity) * .04)), 0 24px 70px rgba(0,0,0,.23);
+  backdrop-filter: blur(calc(12px + var(--glass-intensity) * 11px)) saturate(112%);
+  -webkit-backdrop-filter: blur(calc(12px + var(--glass-intensity) * 11px)) saturate(112%);
+  transition: padding .42s ease, border-radius .42s ease, background .3s ease, box-shadow .3s ease, backdrop-filter .3s ease;
 }
 .weather-icon {
   display: grid;
@@ -238,9 +243,11 @@ button:disabled { cursor: not-allowed; opacity: .4; }
   gap: 12px;
   padding: 7px 12px;
   border-radius: 17px;
-  border-color: rgba(240,246,253,.075);
-  background: rgba(240,246,253,.035);
-  box-shadow: none;
+  border-color: rgba(240,246,253,calc(.06 + var(--glass-intensity) * .055));
+  background: linear-gradient(145deg, rgba(244,248,255,.065), rgba(244,248,255,.018)), rgba(22,21,20,.66);
+  box-shadow: inset 0 1px rgba(255,255,255,.055), 0 10px 30px rgba(0,0,0,.19);
+  backdrop-filter: blur(24px) saturate(118%);
+  -webkit-backdrop-filter: blur(24px) saturate(118%);
 }
 .catalog-mode .weather-topline, .catalog-mode .weather-extra, .catalog-mode .weather-retry { display: none !important; }
 .catalog-mode .weather-row { gap: 10px; }
@@ -369,6 +376,28 @@ button:disabled { cursor: not-allowed; opacity: .4; }
 .field-label input:not([type="range"]) { width: 100%; min-width: 0; height: 45px; padding: 0 13px; border: 1px solid rgba(240,246,253,.12); border-radius: 12px; color: #f0f4fa; background: rgba(0,0,0,.2); font-size: 11px; font-weight: 400; }
 .field-label input::placeholder, .search-box input::placeholder, .assistant-form input::placeholder { color: #748095; opacity: 1; }
 .field-label input[type="range"] { width: 100%; accent-color: #ccd9eb; }
+.selfmusic-open-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 14px;
+  padding: 11px 16px;
+  border: 1px solid rgba(240,246,253,calc(.08 + var(--glass-intensity) * .08));
+  border-radius: 16px;
+  color: #eaf0f8;
+  background: linear-gradient(145deg, rgba(244,248,255,.075), rgba(244,248,255,.018)), rgba(22,21,20,.55);
+  box-shadow: inset 0 1px rgba(255,255,255,.06), 0 10px 28px rgba(0,0,0,.16);
+  transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.selfmusic-open-button:hover,
+.selfmusic-open-button[data-tv-focused="true"] {
+  border-color: rgba(240,246,253,.24);
+  background: linear-gradient(145deg, rgba(244,248,255,.11), rgba(244,248,255,.035)), rgba(22,21,20,.66);
+  box-shadow: inset 0 1px rgba(255,255,255,.09), 0 14px 32px rgba(0,0,0,.22);
+}
 .field-help { margin: 12px 0 0; color: #8c98aa; font-size: 10px; line-height: 1.7; }
 .check-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 19px; padding: 14px 0 0; border-top: 1px solid var(--line-soft); }
 .check-row span { display: grid; gap: 5px; }
@@ -1293,25 +1322,7 @@ button:disabled { transform: none; }
 
 
 /* Official B1O TV symbol from assets/logo.jpg, cropped to the monitor mark in the app chrome. */
-.brand-logo {
-  display: block;
-  flex: 0 0 auto;
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  object-position: center 40%;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.2);
-  border-radius: 15px;
-  background: #000;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 9px 25px rgba(0,0,0,.22);
-}
-.brand {
-  gap: 13px;
-}
-@media (max-width: 760px) {
-  .brand-logo { width: 42px; height: 42px; border-radius: 13px; }
-}
+.brand { gap: 13px; }
 
 /* --------------------------------------------------------------------------
    Samsung Tizen remote focus

@@ -1752,3 +1752,100 @@ button:disabled { transform: none; }
 .catalog-group-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:15px; }
 .catalog-group-heading h2 { margin: 0; }
 .app-refresh-button { min-height:42px; padding:0 15px; }
+
+
+/* Weather and forecast: inspired by TV-first scenery cards, tuned for B1O's dark glass UI. */
+.app-shell .weather-panel {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 22px;
+  width: min(100%, 520px);
+  min-height: 132px;
+  padding: 24px 28px;
+  border: 1px solid rgba(235,241,249,.13);
+  border-radius: 28px;
+  color: #f4f7fb;
+  background: linear-gradient(145deg, rgba(24,29,38,.88), rgba(7,9,13,.82));
+  box-shadow: 0 16px 42px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.045);
+  text-align: left;
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+}
+.app-shell .weather-panel .weather-icon {
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: 19px;
+  background: rgba(255,255,255,.045);
+}
+.app-shell .weather-panel .weather-copy { gap: 6px; }
+.app-shell .weather-panel .weather-copy small { display:flex; align-items:center; gap:6px; }
+.app-shell .weather-panel[data-tv-focused="true"] {
+  outline: none !important;
+  border-color: rgba(255,255,255,.14);
+  box-shadow: 0 16px 42px rgba(0,0,0,.32), inset 0 1px rgba(255,255,255,.055);
+}
+.forecast-overlay {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 36px;
+  background: rgba(0,0,0,.72);
+  animation: forecast-fade-in .18s ease-out both;
+}
+.forecast-panel {
+  width: min(1250px, calc(100vw - 72px));
+  max-height: calc(100vh - 72px);
+  overflow: auto;
+  padding: clamp(24px, 3vw, 42px);
+  border: 1px solid rgba(245,248,252,.13);
+  border-radius: 30px;
+  color: #f4f7fb;
+  background: linear-gradient(145deg, rgba(24,29,38,.98), rgba(6,8,12,.98));
+  box-shadow: 0 30px 90px rgba(0,0,0,.55);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+}
+.forecast-header { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:30px; }
+.forecast-header h2 { margin:7px 0 5px; font-size:clamp(28px,3vw,42px); font-weight:500; letter-spacing:-1.4px; }
+.forecast-header p { margin:0; color:rgba(230,236,245,.62); font-size:16px; }
+.forecast-days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:10px; }
+.forecast-day {
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  padding:22px 10px;
+  border:1px solid rgba(237,243,251,.085);
+  border-radius:20px;
+  background:rgba(255,255,255,.025);
+}
+.forecast-weekday { color:rgba(243,246,251,.9); font-size:16px; font-weight:650; }
+.forecast-date { color:rgba(220,228,240,.5); font-size:12px; }
+.forecast-icon { display:grid; place-items:center; height:50px; color:#e8edf5; }
+.forecast-icon svg { width:34px; height:34px; stroke-width:1.5; }
+.forecast-day strong { margin-top:4px; font-size:20px; font-weight:650; }
+.forecast-low { color:rgba(221,229,241,.48); font-size:16px; }
+.forecast-footnote { margin:24px 0 0; color:rgba(220,228,240,.42); font-size:12px; }
+.forecast-empty { display:grid; justify-items:center; gap:10px; padding:40px 20px; color:rgba(225,233,243,.6); text-align:center; }
+.forecast-empty svg { width:32px; height:32px; }
+.forecast-empty strong { color:#f3f6fb; }
+@keyframes forecast-fade-in { from { opacity:0; } to { opacity:1; } }
+@media (max-width: 1000px) {
+  .forecast-days { grid-template-columns:repeat(4,minmax(0,1fr)); }
+}
+@media (max-width: 620px) {
+  .forecast-overlay { padding:12px; }
+  .forecast-panel { width:100%; max-height:calc(100vh - 24px); padding:20px; border-radius:22px; }
+  .forecast-days { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+/* TV fast path: keep the richer layout but remove expensive blur and modal entrance animation. */
+.app-shell.tv-runtime .weather-panel,
+.app-shell.tv-runtime .forecast-panel { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+.app-shell.tv-runtime .forecast-overlay { animation:none !important; }
+.app-shell.tv-runtime .forecast-day { background:rgba(255,255,255,.03); }
+.app-shell.tv-runtime .weather-panel[data-tv-focused="true"] { transform:scale(1.015); box-shadow:0 12px 26px rgba(0,0,0,.36) !important; }

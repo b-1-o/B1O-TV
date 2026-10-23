@@ -71,6 +71,7 @@ function readSettings(): TVSettings {
     if (typeof settings.aiEndpoint !== 'string' || !settings.aiEndpoint.trim()) {
       settings.aiEndpoint = DEFAULT_CONFIG.aiEndpoint;
     }
+    if (typeof settings.adaptiveScenery !== 'boolean') settings.adaptiveScenery = DEFAULT_CONFIG.adaptiveScenery;
     if (!WALLPAPERS.some((wallpaper) => wallpaper.id === settings.wallpaper)) {
       settings.wallpaper = DEFAULT_CONFIG.wallpaper;
     }
@@ -97,6 +98,23 @@ function readTimer(): ActiveTimer | null {
   }
 }
 
+function formatTemperature(temperatureF: number, unit: TVSettings['temperatureUnit']): string {
+  const displayed = unit === 'C' ? (temperatureF - 32) * 5 / 9 : temperatureF;
+  return Math.round(displayed) + '°' + unit;
+}
+
+function getAdaptiveWallpaper(weather: WeatherSnapshot | null, now: Date) {
+  if (!weather) return WALLPAPERS.find((wallpaper) => wallpaper.id === 'wallhaven') ?? WALLPAPERS[0];
+  const hour = now.getHours();
+  let id = 'wallhaven';
+  if (!weather.isDay || hour < 6 || hour >= 20) id = 'wallhaven';
+  else if ([45, 48].includes(weather.code)) id = 'sakura';
+  else if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99].includes(weather.code)) id = 'canopy';
+  else if (weather.code === 0) id = 'main';
+  else if (weather.code <= 3) id = 'castle';
+  return WALLPAPERS.find((wallpaper) => wallpaper.id === id) ?? WALLPAPERS[0];
+}
+
 function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
   if (code === 0) return isDay ? <Sun /> : <Moon />;
   if (code === 45 || code === 48) return <CloudFog />;
@@ -118,6 +136,7 @@ function App() {
   const [settings, setSettings] = useState<TVSettings>(readSettings);
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const [forecastOpen, setForecastOpen] = useState(false);
   const [weatherError, setWeatherError] = useState('');
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [installedApps, setInstalledApps] = useState<InstalledTVApp[]>([]);
@@ -274,6 +293,11 @@ function App() {
 
       // Backspace in a text field edits text; it must not navigate away.
       if (isBack && (!isTyping || isTizenBack || event.key === 'Escape')) {
+        if (forecastOpen) {
+          event.preventDefault();
+          setForecastOpen(false);
+          return;
+        }
         if (assistantOpen) {
           event.preventDefault();
           closeAssistant();
@@ -304,7 +328,7 @@ function App() {
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [assistantOpen, view, closeAssistant, navigateToView]);
+  }, [assistantOpen, forecastOpen, view, closeAssistant, navigateToView]);
 
   const preferredFocusKey = view === 'home'
     ? 'CARD-youtube'
@@ -332,6 +356,14 @@ function App() {
     }, 0);
     return () => window.clearTimeout(focusTimer);
   }, [assistantOpen]);
+
+  useEffect(() => {
+    if (!forecastOpen) return;
+    const focusTimer = window.setTimeout(() => {
+      if (doesFocusableExist('FORECAST-CLOSE')) setFocus('FORECAST-CLOSE');
+    }, 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [forecastOpen]);
 
   const updateSetting = <K extends keyof TVSettings>(key: K, value: TVSettings[K]) => {
     setSettings((previous) => ({ ...previous, [key]: value }));
@@ -604,7 +636,9 @@ function App() {
   }, [shouldShowIsland, islandMounted]);
 
   const shellClass = 'app-shell' + (isTizenRuntime() ? ' tv-runtime' : '') + (settings.reduceMotion ? ' reduce-motion' : '') + (view === 'home' && compactHome ? ' catalog-mode' : '');
-  const activeWallpaper = WALLPAPERS.find((wallpaper) => wallpaper.id === settings.wallpaper) ?? WALLPAPERS[0];
+  const activeWallpaper = settings.adaptiveScenery
+    ? getAdaptiveWallpaper(weather, now)
+    : WALLPAPERS.find((wallpaper) => wallpaper.id === settings.wallpaper) ?? WALLPAPERS[0];
   const displayedClock = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' }).format(now);
   const displayedDate = new Intl.DateTimeFormat('en-US', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
 
@@ -663,14 +697,14 @@ function App() {
                   <div className="date-line">{displayedDate}</div>
                 </div>
 
-                <aside className="weather-panel" aria-label="Weather">
+                <TVButton focusKey="WEATHER-FORECAST" className="weather-panel" data-tv-focus="true" aria-label="Open seven-day weather forecast" onClick={() => setForecastOpen(true)}>
                   <div className="weather-icon" aria-hidden="true">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>
                   <div className="weather-copy">
-                    <strong>{weatherLoading ? '—' : weather ? Math.round(settings.temperatureUnit === 'C' ? (weather.temperatureF - 32) * 5 / 9 : weather.temperatureF) + '°' + settings.temperatureUnit : '—'}</strong>
+                    <strong>{weatherLoading ? '—' : weather ? formatTemperature(weather.temperatureF, settings.temperatureUnit) : '—'}</strong>
                     <span>{weather ? describeWeather(weather.code) : weatherError ? 'Weather unavailable' : 'Loading…'}</span>
-                    <small>{weather?.city ?? settings.city}</small>
+                    <small>{weather?.city ?? settings.city} · 7-day forecast <ArrowRight size={13} /></small>
                   </div>
-                </aside>
+                </TVButton>
               </section>
             </div>
 
@@ -724,7 +758,7 @@ function App() {
             </section>
             <div className="settings-grid">
               <section className="settings-card glass-panel"><div className="settings-card-head"><Cloud /><div><h2>Weather</h2><p>Choose the location and temperature units shown on Home.</p></div></div><label className="field-label">City<TVInput data-tv-focus="true" value={settings.city} onChange={(event) => updateSetting('city', event.target.value)} placeholder="Los Angeles" /></label><label className="field-label">Temperature units<TVSelect data-tv-focus="true" value={settings.temperatureUnit} onChange={(event) => updateSetting('temperatureUnit', event.target.value === 'C' ? 'C' : 'F')}><option value="F">Fahrenheit (°F)</option><option value="C">Celsius (°C)</option></TVSelect></label><p className="field-help">Current conditions are provided by Open-Meteo. Location access is not requested automatically.</p></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Appearance</h2><p>Theme, wallpaper, and floating navigation material.</p></div></div><div className="theme-setting-row"><span><strong>Color theme</strong><small>Saved automatically and restored on launch.</small></span><TVButton className="secondary-button theme-toggle-button" data-tv-focus="true" aria-label={'Switch to ' + (mode === 'dark' ? 'light' : 'dark') + ' theme'} onClick={toggleTheme}>{mode === 'dark' ? <Moon size={17} /> : <Sun size={17} />} {mode === 'dark' ? 'Dark theme' : 'Light theme'}</TVButton></div><label className="field-label">Liquid Glass intensity <strong>{settings.glassIntensity}%</strong><TVInput data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Reduce motion</strong><small>Disables non-essential animations.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Appearance</h2><p>Theme, wallpaper, and floating navigation material.</p></div></div><div className="theme-setting-row"><span><strong>Color theme</strong><small>Saved automatically and restored on launch.</small></span><TVButton className="secondary-button theme-toggle-button" data-tv-focus="true" aria-label={'Switch to ' + (mode === 'dark' ? 'light' : 'dark') + ' theme'} onClick={toggleTheme}>{mode === 'dark' ? <Moon size={17} /> : <Sun size={17} />} {mode === 'dark' ? 'Dark theme' : 'Light theme'}</TVButton></div><label className="field-label">Liquid Glass intensity <strong>{settings.glassIntensity}%</strong><TVInput data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Reduce motion</strong><small>Disables non-essential animations.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label><label className="check-row"><span><strong>Weather-adaptive scenery</strong><small>Switches between included landscapes based on weather and day/night.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.adaptiveScenery} onChange={(event) => updateSetting('adaptiveScenery', event.target.checked)} /></label></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="https://jellyfin.example.com" /></label><label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="https://music.example.com" /></label><p className="field-help">Set the exact URL where SelfMusic is running. HTTPS is preferred; HTTP is allowed for localhost, private LAN, and Tailscale addresses.</p></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI & Voice</h2><p>Connect your backend endpoint. Keep model API keys on the server.</p></div></div><label className="field-label">AI backend endpoint<TVInput data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Device token<TVInput data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Your Cloudflare Worker token" /></label><p className="field-help">This is the device access token, not the model API key. It stays in local app storage. The endpoint accepts message/history JSON and returns a reply.</p><label className="check-row"><span><strong>Speak replies aloud</strong><small>Requires Speech Synthesis support in this Tizen browser.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><TVButton className="secondary-button test-voice-button" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={17} /> Test Voice Assistant <ArrowRight size={15} /></TVButton></section>
             </div>
@@ -740,6 +774,37 @@ function App() {
         <TVButton focusKey="DOCK-settings" className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => navigateToView('settings')}><Settings2 size={19} /><span>Settings</span></TVButton>
         <TVButton focusKey="DOCK-assistant" className="dock-item dock-assistant" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={19} /><span>Voice / AI</span></TVButton>
       </nav>
+
+      {forecastOpen && (
+        <div className="forecast-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setForecastOpen(false); }}>
+          <FocusGroup focusKey="FORECAST-DIALOG" focusBoundary className="forecast-panel glass-panel" role="dialog" aria-modal="true" aria-labelledby="forecast-title">
+            <header className="forecast-header">
+              <div><span className="eyebrow small">WEATHER / WEEK AHEAD</span><h2 id="forecast-title">7-day forecast</h2><p>{weather?.city ?? settings.city}</p></div>
+              <TVButton focusKey="FORECAST-CLOSE" className="icon-button" data-tv-focus="true" onClick={() => setForecastOpen(false)} aria-label="Close weather forecast"><X /></TVButton>
+            </header>
+            {weather?.forecast?.length ? (
+              <div className="forecast-days">
+                {weather.forecast.map((day, index) => {
+                  const date = new Date(day.date + 'T12:00:00');
+                  const label = index === 0 ? 'Today' : new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date);
+                  return (
+                    <article className="forecast-day" key={day.date}>
+                      <span className="forecast-weekday">{label}</span>
+                      <span className="forecast-date">{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date)}</span>
+                      <span className="forecast-icon"><WeatherIcon code={day.code} isDay /></span>
+                      <strong>{formatTemperature(day.highF, settings.temperatureUnit)}</strong>
+                      <span className="forecast-low">{formatTemperature(day.lowF, settings.temperatureUnit)}</span>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="forecast-empty"><Cloud /><strong>Forecast unavailable</strong><span>{weatherError || 'Check the connection and reopen the forecast.'}</span></div>
+            )}
+            <p className="forecast-footnote">Forecast by Open-Meteo · Press Back to close.</p>
+          </FocusGroup>
+        </div>
+      )}
 
       {assistantOpen && (
         <div className={'assistant-overlay' + (assistantClosing ? ' is-closing' : '')} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAssistant(); }}>

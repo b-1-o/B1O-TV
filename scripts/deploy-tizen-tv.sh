@@ -13,6 +13,10 @@ OUT_DIR="$ROOT/release-tizen"
 STAGE="$ROOT/.tizen-stage-$$"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 REMOTE_WGT="/home/owner/share/tmp/sdk_tools/tmp/B1O_TV_$STAMP.wgt"
+# Optional pre-signed TizenTube standalone WGT; installed before B1O TV when provided.
+TIZENTUBE_WGT="${TIZENTUBE_WGT:-}"
+TIZENTUBE_PACKAGE_ID="${TIZENTUBE_PACKAGE_ID:-xvvl3S1TT1}"
+REMOTE_TIZENTUBE_WGT="/home/owner/share/tmp/sdk_tools/tmp/TizenTube_$STAMP.wgt"
 
 cleanup() {
   rm -rf -- "$STAGE"
@@ -26,6 +30,9 @@ fail() {
 
 [[ -x "$TIZEN_CLI" ]] || fail "Tizen CLI not found: $TIZEN_CLI. Set TIZEN_CLI or TIZEN_TOOLS."
 [[ -x "$SDB_CLI" ]] || fail "SDB not found: $SDB_CLI. Set SDB_CLI or TIZEN_TOOLS."
+if [[ -n "$TIZENTUBE_WGT" && ! -s "$TIZENTUBE_WGT" ]]; then
+  fail "TIZENTUBE_WGT does not exist or is empty: $TIZENTUBE_WGT"
+fi
 [[ -f "$ROOT/public/config.xml" ]] || fail "Run this script from the B1web repository; public/config.xml is missing."
 if [[ ! -x "$ROOT/node_modules/.bin/tsc" || ! -f "$ROOT/node_modules/@noriginmedia/norigin-spatial-navigation/package.json" ]]; then
   printf 'Dependencies are missing or incomplete; syncing package.json and package-lock.json...\n'
@@ -61,9 +68,20 @@ printf 'Signed package saved: %s\n' "$OUT_DIR/B1O TV.wgt"
 printf '\n[4/5] Copying package to TV %s...\n' "$TV_ADDR"
 "$SDB_CLI" -s "$TV_ADDR" push "$OUT_DIR/B1O TV.wgt" "$REMOTE_WGT"
 
-printf '\n[5/5] Installing and launching B1O TV...\n'
+if [[ -n "$TIZENTUBE_WGT" ]]; then
+  printf '\\n[4/5] Installing TizenTube before B1O TV...\\n'
+  printf 'TizenTube package ID: %s\\n' "$TIZENTUBE_PACKAGE_ID"
+  printf 'Using provided, already TV-installable WGT: %s\\n' "$TIZENTUBE_WGT"
+  "$SDB_CLI" -s "$TV_ADDR" push "$TIZENTUBE_WGT" "$REMOTE_TIZENTUBE_WGT"
+  "$SDB_CLI" -s "$TV_ADDR" shell 0 vd_appinstall "$TIZENTUBE_PACKAGE_ID" "$REMOTE_TIZENTUBE_WGT"
+fi
+
+printf '\\n[5/5] Installing and launching B1O TV...\\n'
 "$SDB_CLI" -s "$TV_ADDR" shell 0 vd_appinstall "$PACKAGE_ID" "$REMOTE_WGT"
 "$TIZEN_CLI" run -s "$TV_ADDR" -p "$APP_ID"
 
-printf '\nDone. Signed WGT: %s\n' "$OUT_DIR/B1O TV.wgt"
-printf 'If the TV app opens but a feature does not work, capture TV logs before changing the certificate/profile.\n'
+printf '\\nDone. Signed WGT: %s\\n' "$OUT_DIR/B1O TV.wgt"
+if [[ -n "$TIZENTUBE_WGT" ]]; then
+  printf 'TizenTube was installed separately before B1O TV.\\n'
+fi
+printf 'If the TV app opens but a feature does not work, capture TV logs before changing the certificate/profile.\\n'

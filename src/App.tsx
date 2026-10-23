@@ -36,6 +36,7 @@ import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
 import { useTheme } from './contexts/ThemeContext';
 import { DEFAULT_CONFIG } from './defaultConfig';
 import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, HomeInstalledAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
+import { SelfMusicPanel } from './components/tv/SelfMusicPanel';
 
 const SETTINGS_KEY = 'b1o-tv:settings';
 const TIMER_KEY = 'b1o-tv:timer';
@@ -55,19 +56,8 @@ const WALLPAPERS = [
 const FEATURED_APPS: TVApp[] = [
   { id: 'youtube', name: 'TizenTube', subtitle: 'Launch the installed YouTube client', category: 'Video', symbol: 'YT', target: 'youtube' },
   { id: 'jellyfin', name: 'Jellyfin', subtitle: 'Your home media library', category: 'Movies & TV', symbol: 'JF', target: 'jellyfin' },
-  { id: 'selfmusic', name: 'SelfMusic', subtitle: 'Sign in with your SelfMusic password', category: 'Music', symbol: 'SM', target: 'selfmusic' },
+  { id: 'selfmusic', name: 'SelfMusic', subtitle: 'Your music library and player, built into B1O TV', category: 'Music', symbol: 'SM', target: 'selfmusic' },
   { id: 'browser', name: 'Browser', subtitle: 'Websites and web apps', category: 'Tools', symbol: 'WWW', target: 'browser' },
-];
-
-// Safe demo data makes the TV-only app shelf and navigation previewable on a desktop browser.
-// These rows are never used on the actual Tizen runtime.
-const PREVIEW_INSTALLED_APPS: InstalledTVApp[] = [
-  { id: 'preview:tizentube', name: 'TizenTube', version: 'Preview' },
-  { id: 'preview:jellyfin', name: 'Jellyfin', version: 'Preview' },
-  { id: 'preview:selfmusic', name: 'SelfMusic', version: 'Preview' },
-  { id: 'preview:netflix', name: 'Netflix', version: 'Preview' },
-  { id: 'preview:primevideo', name: 'Prime Video', version: 'Preview' },
-  { id: 'preview:internet', name: 'Samsung Internet', version: 'Preview' },
 ];
 
 function readSettings(): TVSettings {
@@ -142,6 +132,8 @@ function App() {
   const [view, setView] = useState<View>('home');
   const [compactHome, setCompactHome] = useState(false);
   const [musicActivity, setMusicActivity] = useState(false);
+  const [selfMusicNowPlaying, setSelfMusicNowPlaying] = useState('');
+  const [selfMusicAccessToken, setSelfMusicAccessToken] = useState('');
   const [settings, setSettings] = useState<TVSettings>(readSettings);
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
@@ -208,7 +200,7 @@ function App() {
   }, []);
 
   const refreshInstalledApps = useCallback(async () => {
-    const apps = isTizenRuntime() ? await getInstalledApps() : PREVIEW_INSTALLED_APPS;
+    const apps = await getInstalledApps();
     setInstalledApps(apps);
     return apps;
   }, []);
@@ -356,14 +348,16 @@ function App() {
       ? 'CATALOG-youtube'
       : view === 'library'
         ? 'LIBRARY-jellyfin'
-        : 'WALLPAPER-main';
+        : view === 'selfmusic'
+          ? (selfMusicAccessToken ? 'SELFMUSIC-SEARCH' : 'SELFMUSIC-SERVER-URL')
+          : 'WALLPAPER-main';
 
   useEffect(() => {
     const focusTimer = window.setTimeout(() => {
       if (doesFocusableExist(preferredFocusKey)) {
         setFocus(preferredFocusKey);
       } else {
-        setFocus(view === 'settings' ? 'DOCK-settings' : view === 'apps' ? 'DOCK-apps' : 'BRAND-HOME');
+        setFocus(view === 'settings' ? 'DOCK-settings' : view === 'apps' ? 'DOCK-apps' : view === 'selfmusic' ? 'DOCK-selfmusic' : 'BRAND-HOME');
       }
     }, 0);
     return () => window.clearTimeout(focusTimer);
@@ -456,6 +450,11 @@ function App() {
     reader.readAsText(file);
   };
 
+  const handleSelfMusicPlayback = useCallback((state: { isPlaying: boolean; title: string }) => {
+    setMusicActivity(state.isPlaying);
+    setSelfMusicNowPlaying(state.isPlaying ? state.title : '');
+  }, []);
+
   const runApp = useCallback(async (target: AppTarget): Promise<{ ok: boolean; message: string }> => {
     if (target === 'assistant') {
       openAssistant();
@@ -463,7 +462,8 @@ function App() {
     }
 
     if (target === 'selfmusic') {
-      setMusicActivity(true);
+      navigateToView('selfmusic');
+      return { ok: true, message: 'SelfMusic opened inside B1O TV.' };
     }
 
     const result = await launchTVService(target, installedApps, {
@@ -471,12 +471,9 @@ function App() {
       selfMusicUrl: settings.selfMusicUrl,
     });
 
-    if (target === 'selfmusic' && !result.ok) {
-      setMusicActivity(false);
-    }
     notify(result.message);
     return result;
-  }, [installedApps, notify, openAssistant, settings.jellyfinUrl, settings.selfMusicUrl]);
+  }, [installedApps, navigateToView, notify, openAssistant, settings.jellyfinUrl, settings.selfMusicUrl]);
 
   const launchInstalledApp = useCallback((appId: string) => {
     if (!isTizenRuntime()) {
@@ -832,16 +829,16 @@ function App() {
             <span className="island-countdown">{formatDuration(remainingMs)}</span>
           </TVButton>
         ) : (
-          <TVButton className="island-main island-music-main" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Return to SelfMusic">
+          <TVButton className="island-main island-music-main" data-tv-focus="true" onClick={() => navigateToView('selfmusic')} aria-label="Return to SelfMusic player">
             <span className="island-orb music-orb"><Music2 size={18} /></span>
-            <span className="island-copy"><strong>SelfMusic</strong><small>Now active</small></span>
+            <span className="island-copy"><strong>SelfMusic</strong><small>{selfMusicNowPlaying || 'Now playing'}</small></span>
             <Play size={16} />
           </TVButton>
         )}
 
         {timer && (voiceListening || assistantBusy || assistantActivityText) && <span className="island-secondary"><Timer size={14} /><strong>{formatDuration(remainingMs)}</strong></span>}
         {musicActivity && (voiceListening || assistantBusy || assistantActivityText || timer) && (
-          <TVButton className="island-activity-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')} aria-label="Return to SelfMusic"><Music2 size={15} /></TVButton>
+          <TVButton className="island-activity-button" data-tv-focus="true" onClick={() => navigateToView('selfmusic')} aria-label="Return to SelfMusic player"><Music2 size={15} /></TVButton>
         )}
         {timer && (voiceListening || assistantBusy || assistantActivityText) && <TVButton className="island-dismiss" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Cancel timer"><X size={14} /></TVButton>}
         {musicActivity && (voiceListening || assistantBusy || assistantActivityText || timer) && <TVButton className="island-dismiss" data-tv-focus="true" onClick={() => setMusicActivity(false)} aria-label="Hide music activity"><X size={14} /></TVButton>}
@@ -878,12 +875,12 @@ function App() {
             {homeInstalledApps.length > 0 && (
               <section className="section-block home-installed-section" aria-label={isTizenRuntime() ? "Installed TV apps" : "Preview app shelf"}>
                 <div className="section-heading">
-                  <div><span className="eyebrow small">{isTizenRuntime() ? "READY TO LAUNCH" : "BROWSER PREVIEW · SAMPLE APPS"}</span><h2>{isTizenRuntime() ? "On This TV" : "Sample Apps"}</h2></div>
+                  <div><span className="eyebrow small">READY TO LAUNCH</span><h2>On This TV</h2></div>
                   <TVButton className="text-action all-library-link" data-tv-focus="true" onClick={() => navigateToView('apps')}>All Apps <ArrowRight size={15} /></TVButton>
                 </div>
                 <CardGrid focusKey="HOME-INSTALLED-GRID" className="home-installed-apps">
                   {homeInstalledApps.map((app) => (
-                    <HomeInstalledAppCard key={app.id} app={app} onSelect={launchInstalledApp} preview={!isTizenRuntime()} />
+                    <HomeInstalledAppCard key={app.id} app={app} onSelect={launchInstalledApp} />
                   ))}
                 </CardGrid>
               </section>
@@ -904,11 +901,23 @@ function App() {
           </>
         )}
 
+        {view === 'selfmusic' && (
+          <section className="page-section selfmusic-page-section">
+            <SelfMusicPanel
+              baseUrl={settings.selfMusicUrl}
+              onServerUrlChange={(value) => updateSetting('selfMusicUrl', value)}
+              accessToken={selfMusicAccessToken}
+              onAccessTokenChange={setSelfMusicAccessToken}
+              onPlaybackChange={handleSelfMusicPlayback}
+            />
+          </section>
+        )}
+
         {view === 'apps' && (
           <section className="page-section">
-            <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>{isTizenRuntime() ? "Featured apps and apps detected on this TV." : "Browser preview with sample TV apps. Native launch actions are available only on the TV."}</p></div><label className="search-box glass-panel"><Search size={18} /><TVInput data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps…" /></label></div>
+            <div className="page-title-row"><div><span className="eyebrow small">YOUR LIBRARY</span><h1>Apps</h1><p>{isTizenRuntime() ? "Featured services and apps detected on this TV." : "Test the built-in services here. Native app discovery and TV app launches are available only on Samsung Tizen."}</p></div><label className="search-box glass-panel"><Search size={18} /><TVInput data-tv-focus="true" aria-label="Search apps" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps…" /></label></div>
             <div className="catalog-group"><h2>Featured Services <span>0{filteredApps.featured.length}</span></h2><CardGrid focusKey="APPS-FEATURED-GRID" className="app-catalog-grid">{filteredApps.featured.map((app) => <CatalogAppCard key={app.id} app={app} onLaunch={runApp} />)}</CardGrid></div>
-            <div className="catalog-group"><div className="catalog-group-heading"><h2>{isTizenRuntime() ? "Installed on TV" : "Sample apps · preview only"} <span>{installedApps.length}</span></h2><TVButton className="secondary-button app-refresh-button" data-tv-focus="true" onClick={() => { void refreshInstalledApps().then(() => notify('TV app list refreshed.')); }}><RefreshCw size={15} /> Refresh TV apps</TVButton></div>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Your TV app list will appear here'}</strong><span>This browser preview cannot read installed apps. On Samsung TV, the list depends on Tizen Web API permissions.</span></div>}</div>
+            <div className="catalog-group"><div className="catalog-group-heading"><h2>Installed on TV <span>{installedApps.length}</span></h2><TVButton className="secondary-button app-refresh-button" data-tv-focus="true" onClick={() => { void refreshInstalledApps().then(() => notify('TV app list refreshed.')); }}><RefreshCw size={15} /> Refresh TV apps</TVButton></div>{installedApps.length ? <CardGrid focusKey="INSTALLED-APPS-GRID" className="installed-list">{filteredApps.discovered.map((app) => <InstalledAppRow key={app.id} app={app} onSelect={launchInstalledApp} />)}</CardGrid> : <div className="empty-state glass-panel"><Info /><strong>{isTizenRuntime() ? 'App list unavailable' : 'Installed apps are TV-only'}</strong><span>No fake app entries are shown in the browser preview. When B1O TV runs on Samsung Tizen, this list is populated from the TV app catalogue.</span></div>}</div>
           </section>
         )}
 
@@ -917,7 +926,7 @@ function App() {
             <div className="page-title-row"><div><span className="eyebrow small">YOUR MEDIA</span><h1>Media Library</h1><p>One place for movies, shows, and music. Configure each service below.</p></div><TVButton className="secondary-button" data-tv-focus="true" onClick={() => navigateToView('settings')}><Settings2 size={17} /> Connections</TVButton></div>
             <div className="library-grid">
               <article className="library-card glass-panel"><div className="library-art jellyfin-art"><Film /></div><div className="library-card-copy"><span className="eyebrow small">MOVIES & TV</span><h2>Jellyfin</h2><p>Your home library, playback, and continue watching.</p><TVButton focusKey="LIBRARY-jellyfin" className="primary-button" data-tv-focus="true" onClick={() => void runApp('jellyfin')}><Play size={17} /> Open Jellyfin</TVButton></div></article>
-              <article className="library-card glass-panel"><div className="library-art music-art"><Music2 /></div><div className="library-card-copy"><span className="eyebrow small">YOUR MUSIC</span><h2>SelfMusic</h2><p>Your tracks, cover art, favorites, and playlists on your own server.</p><TVButton focusKey="LIBRARY-selfmusic" className="primary-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Play size={17} /> Open SelfMusic</TVButton></div></article>
+              <article className="library-card glass-panel"><div className="library-art music-art"><Music2 /></div><div className="library-card-copy"><span className="eyebrow small">YOUR MUSIC</span><h2>SelfMusic</h2><p>Your tracks, cover art, favorites, playlists, and playback without leaving B1O TV.</p><TVButton focusKey="LIBRARY-selfmusic" className="primary-button" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Play size={17} /> Open built-in player</TVButton></div></article>
             </div>
             <div className="note-area glass-panel"><div className="note-area-title"><BookOpen /><div><h2>Assistant Memory</h2><p>Notes are saved locally in this app.</p></div><TVButton className="secondary-button" data-tv-focus="true" onClick={openAssistant}>Ask Assistant</TVButton></div>{notes.length ? <div className="notes-list">{notes.slice(-5).reverse().map((note) => <div className="note-row" key={note.id}><span>{note.text}</span><small>{new Date(note.createdAt).toLocaleDateString('en-US')}</small></div>)}</div> : <div className="empty-notes">Things you ask the assistant to remember will appear here.</div>}</div>
           </section>
@@ -940,7 +949,7 @@ function App() {
             <div className="settings-grid">
               <section className="settings-card glass-panel"><div className="settings-card-head"><Cloud /><div><h2>Weather</h2><p>Choose the location and temperature units shown on Home.</p></div></div><label className="field-label">City<TVInput data-tv-focus="true" value={settings.city} onChange={(event) => updateSetting('city', event.target.value)} placeholder="Los Angeles" /></label><label className="field-label">Temperature units<TVSelect data-tv-focus="true" value={settings.temperatureUnit} onChange={(event) => updateSetting('temperatureUnit', event.target.value === 'C' ? 'C' : 'F')}><option value="F">Fahrenheit (°F)</option><option value="C">Celsius (°C)</option></TVSelect></label><p className="field-help">Current conditions are provided by Open-Meteo. Location access is not requested automatically.</p></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Sparkles /><div><h2>Appearance</h2><p>Theme, wallpaper, and floating navigation material.</p></div></div><div className="theme-setting-row"><span><strong>Color theme</strong><small>Saved automatically and restored on launch.</small></span><TVButton className="secondary-button theme-toggle-button" data-tv-focus="true" aria-label={'Switch to ' + (mode === 'dark' ? 'light' : 'dark') + ' theme'} onClick={toggleTheme}>{mode === 'dark' ? <Moon size={17} /> : <Sun size={17} />} {mode === 'dark' ? 'Dark theme' : 'Light theme'}</TVButton></div><label className="field-label">Liquid Glass intensity <strong>{settings.glassIntensity}%</strong><TVInput data-tv-focus="true" type="range" min="25" max="100" step="5" value={settings.glassIntensity} onChange={(event) => updateSetting('glassIntensity', Number(event.target.value))} /></label><label className="check-row"><span><strong>Reduce motion</strong><small>Disables non-essential animations.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label><label className="check-row"><span><strong>Weather-adaptive scenery</strong><small>Switches between included landscapes based on weather and day/night.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.adaptiveScenery} onChange={(event) => updateSetting('adaptiveScenery', event.target.checked)} /></label></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="http://192.168.1.10:8096" /></label><label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="http://192.168.1.10:8787" /></label><p className="field-help">This is the SelfMusic web-app address, usually port 8787 on your music server (not B1O preview on port 5173). When opened, SelfMusic shows its normal PC/mobile login; enter your existing username/password there. B1O TV does not store your SelfMusic password. On the TV, localhost means the TV itself. Use HTTPS for public servers.</p><TVButton className="selfmusic-open-button" data-tv-focus="true" onClick={() => { void runApp('selfmusic'); }}><Music2 size={16} /> Open SelfMusic / Sign in <ArrowRight size={16} /></TVButton></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="http://192.168.1.10:8096" /></label><label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="http://192.168.1.10:8787" /></label><p className="field-help">SelfMusic now runs inside B1O TV using its authenticated API. Add the exact origin shown on the built-in SelfMusic screen to SELF_MUSIC_ALLOWED_ORIGINS in the SelfMusic server’s private .env file, then restart that server. The player keeps its signed access token in memory and never saves your password. Use the LAN address for local preview or a private HTTPS/Tailscale URL for remote access.</p><TVButton className="selfmusic-open-button" data-tv-focus="true" onClick={() => { void runApp('selfmusic'); }}><Music2 size={16} /> Open built-in player <ArrowRight size={16} /></TVButton></section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI & Voice</h2><p>Connect your backend endpoint. Keep model API keys on the server.</p></div></div><label className="field-label">AI backend endpoint<TVInput data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Device token<TVInput data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Your Cloudflare Worker token" /></label><p className="field-help">This is the device access token, not the model API key. It stays in local app storage. The endpoint accepts message/history JSON and returns a reply.</p><label className="check-row"><span><strong>Speak replies aloud</strong><small>Requires Speech Synthesis support in this Tizen browser.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><TVButton className="secondary-button test-voice-button" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={17} /> Test Voice Assistant <ArrowRight size={15} /></TVButton></section>
             </div>
             <section className="settings-card glass-panel setup-transfer-card"><div className="settings-card-head"><Download /><div><h2>PC → TV Setup</h2><p>Configure everything here, then transfer your setup to the TV.</p></div></div><div className="setup-transfer-actions"><TVButton className="primary-button" data-tv-focus="true" onClick={exportTVSetup}><Download size={17} /> Export TV Setup</TVButton><TVButton className="secondary-button" data-tv-focus="true" onClick={() => setupImportRef.current?.click()}><Upload size={17} /> Import TV Setup</TVButton><input ref={setupImportRef} className="visually-hidden" type="file" accept="application/json,.json" aria-label="Import a B1O TV setup file" onChange={(event) => importTVSetup(event.target.files?.[0])} /></div><p className="field-help">Export creates b1o-tv-setup.json with your city, wallpaper, service URLs, temperature unit, AI endpoint, and device token. On the TV, open Settings → Import TV Setup and choose the same file. Keep it private because it contains your device token.</p></section>

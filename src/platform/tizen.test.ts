@@ -30,8 +30,7 @@ describe('isAllowedServiceUrl', () => {
 });
 
 describe('launchTVService', () => {
-  it('launches TizenTube using its exact app ID in the Tizen runtime', async () => {
-    const launch = vi.fn((_appId: string, onSuccess?: () => void) => onSuccess?.());
+  const stubTizenRuntime = (launch: ReturnType<typeof vi.fn>) => {
     vi.stubGlobal('window', {
       tizen: {
         application: {
@@ -42,10 +41,30 @@ describe('launchTVService', () => {
       setTimeout: globalThis.setTimeout,
       clearTimeout: globalThis.clearTimeout,
     });
+  };
+
+  it('launches the current standalone TizenTube using the ID discovered from installed apps', async () => {
+    const launch = vi.fn((_appId: string, onSuccess?: () => void) => onSuccess?.());
+    stubTizenRuntime(launch);
+
+    const result = await launchTVService(
+      'youtube',
+      [{ id: 'xvvl3S1TT1.TizenTubeStandalone', name: 'TizenTube' }],
+      { jellyfinUrl: '', selfMusicUrl: '' },
+    );
+
+    expect(launch).toHaveBeenCalledWith('xvvl3S1TT1.TizenTubeStandalone', expect.any(Function), expect.any(Function));
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('TizenTube launched');
+  });
+
+  it('falls back to the current standalone ID when the installed-app catalogue omits TizenTube', async () => {
+    const launch = vi.fn((_appId: string, onSuccess?: () => void) => onSuccess?.());
+    stubTizenRuntime(launch);
 
     const result = await launchTVService('youtube', [], { jellyfinUrl: '', selfMusicUrl: '' });
 
-    expect(launch).toHaveBeenCalledWith('Ad6NutHP8l.TizenTube', expect.any(Function), expect.any(Function));
+    expect(launch).toHaveBeenCalledWith('xvvl3S1TT1.TizenTubeStandalone', expect.any(Function), expect.any(Function));
     expect(result.ok).toBe(true);
     expect(result.message).toContain('TizenTube launched');
   });

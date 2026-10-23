@@ -2,12 +2,14 @@
 <widget xmlns="http://www.w3.org/ns/widgets"
   xmlns:tizen="http://tizen.org/ns/widgets"
   id="http://b1-o.github.io/B1web/"
-  version="0.2.0"
+  version="0.3.0"
   viewmodes="maximized">
   <name>B1O TV</name>
   <content src="index.html" />
   <icon src="icon.png" />
   <description>B1O TV — Liquid Glass media home for Samsung Smart TV.</description>
+  <!-- Service URLs are configured by the user (SelfMusic/Jellyfin can be on LAN or Tailscale). -->
+  <access origin="*" subdomains="true" />
   <access origin="https://api.open-meteo.com" subdomains="true" />
   <access origin="https://geocoding-api.open-meteo.com" subdomains="true" />
   <access origin="https://b1o-tv-assistant.collab-docs-b1o.workers.dev" subdomains="true" />
@@ -19,6 +21,7 @@
   <tizen:privilege name="http://tizen.org/privilege/application.info" />
   <tizen:privilege name="http://tizen.org/privilege/application.launch" />
   <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice" />
+  <tizen:privilege name="http://tizen.org/privilege/mediacapture" />
   <tizen:privilege name="http://tizen.org/privilege/internet" />
   <tizen:privilege name="http://developer.samsung.com/privilege/voicecontrol" />
 </widget>

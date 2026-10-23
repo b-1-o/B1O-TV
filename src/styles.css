@@ -1908,3 +1908,44 @@ button:disabled { transform: none; }
 .home-installed-app > svg { flex: 0 0 auto; color: rgba(220,230,244,.56); }
 .app-shell.tv-runtime .home-installed-apps { scroll-behavior: auto; }
 .app-shell.tv-runtime .home-installed-app { transition: transform .12s ease-out !important; }
+
+
+/* Older TV GPUs struggle with stacked blur layers; keep the glass look with opaque materials. */
+.app-shell.tv-runtime,
+.app-shell.tv-runtime .topbar,
+.app-shell.tv-runtime .floating-dock,
+.app-shell.tv-runtime .dynamic-island,
+.app-shell.tv-runtime .glass-panel,
+.app-shell.tv-runtime .weather-panel,
+.app-shell.tv-runtime .featured-card,
+.app-shell.tv-runtime .catalog-card,
+.app-shell.tv-runtime .library-card,
+.app-shell.tv-runtime .settings-card,
+.app-shell.tv-runtime .assistant-panel,
+.app-shell.tv-runtime .forecast-panel,
+.app-shell.tv-runtime .toast-message,
+.app-shell.tv-runtime .search-box {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.app-shell.tv-runtime .ambient { display: none !important; }
+.app-shell.tv-runtime,
+.app-shell.tv-runtime .main-content,
+.app-shell.tv-runtime .page-section,
+.app-shell.tv-runtime .home-stage {
+  scroll-behavior: auto !important;
+}
+.app-shell.tv-runtime .featured-card,
+.app-shell.tv-runtime .catalog-card,
+.app-shell.tv-runtime .library-card,
+.app-shell.tv-runtime .settings-card,
+.app-shell.tv-runtime .home-installed-app {
+  contain: layout paint;
+}
+.app-shell.tv-runtime .topbar,
+.app-shell.tv-runtime .floating-dock {
+  background: rgba(8, 10, 14, .96) !important;
+}
+.app-shell.tv-runtime .glass-panel {
+  background-color: rgba(18, 21, 27, .96);
+}

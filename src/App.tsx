@@ -873,7 +873,7 @@ function App() {
             </div>
 
             {homeInstalledApps.length > 0 && (
-              <section className="section-block home-installed-section" aria-label={isTizenRuntime() ? "Installed TV apps" : "Preview app shelf"}>
+              <section className="section-block home-installed-section" aria-label="Installed TV apps">
                 <div className="section-heading">
                   <div><span className="eyebrow small">READY TO LAUNCH</span><h2>On This TV</h2></div>
                   <TVButton className="text-action all-library-link" data-tv-focus="true" onClick={() => navigateToView('apps')}>All Apps <ArrowRight size={15} /></TVButton>

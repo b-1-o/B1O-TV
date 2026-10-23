@@ -13,8 +13,9 @@ const hasConvert = spawnSync('convert', ['-version'], { stdio: 'ignore' }).statu
 const imageMagick = hasMagick ? 'magick' : hasConvert ? 'convert' : null;
 
 if (!imageMagick) {
-  console.warn('[TV assets] ImageMagick is missing. Install it to generate icon.png and optimize TV wallpapers.');
-  process.exit(0);
+  console.error('[TV assets] ImageMagick is required to optimize the TV wallpapers and create dist/icon.png.');
+  console.error('[TV assets] Install it with: sudo pacman -S imagemagick (CachyOS/Arch) or sudo apt-get install imagemagick (Ubuntu/Debian).');
+  process.exit(1);
 }
 
 async function optimizeImage(file) {

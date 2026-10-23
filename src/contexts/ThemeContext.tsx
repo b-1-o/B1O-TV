@@ -1,59 +1,35 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'dark';
 
 interface ThemeContextValue {
-  mode: ThemeMode;
-  isDark: boolean;
-  toggleTheme: () => void;
-  setMode: (mode: ThemeMode) => void;
+  mode: 'dark';
+  isDark: true;
 }
 
 const STORAGE_KEY = 'app-theme';
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-function readInitialTheme(): ThemeMode {
-  try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    return saved === 'light' || saved === 'dark' ? saved : 'light';
-  } catch {
-    return 'light';
-  }
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<ThemeMode>(readInitialTheme);
+  const value = useMemo(() => ({ mode: 'dark' as const, isDark: true as const }), []);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', mode);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute(
-      'content',
-      mode === 'dark' ? '#08090b' : '#edf0f4',
-    );
-
+    // Force the cinematic dark palette on every launch, including devices that
+    // still have "light" saved from an older version of B1O TV.
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#08090b');
     try {
-      window.localStorage.setItem(STORAGE_KEY, mode);
+      window.localStorage.setItem(STORAGE_KEY, 'dark');
     } catch {
-      // Theme switching still works for this session when storage is unavailable.
+      // The fixed dark theme remains active for this session if storage is blocked.
     }
-  }, [mode]);
-
-  const toggleTheme = useCallback(() => {
-    setMode((previous) => (previous === 'light' ? 'dark' : 'light'));
   }, []);
-
-  const value = useMemo(
-    () => ({ mode, isDark: mode === 'dark', toggleTheme, setMode }),
-    [mode, toggleTheme],
-  );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
-  }
+  if (!context) throw new Error('useTheme must be used within ThemeProvider');
   return context;
 }

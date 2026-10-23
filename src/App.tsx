@@ -970,7 +970,7 @@ function App() {
       <nav className="floating-dock" aria-label="B1O TV navigation">
         <TVButton focusKey="DOCK-apps" className={'dock-item' + (view === 'apps' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'apps' ? 'page' : undefined} onClick={() => navigateToView('apps')}><Grid2X2 size={19} /><span>Apps</span></TVButton>
         <TVButton focusKey="DOCK-jellyfin" className="dock-item" data-tv-focus="true" onClick={() => void runApp('jellyfin')}><Film size={19} /><span>Jellyfin</span></TVButton>
-        <TVButton focusKey="DOCK-selfmusic" className="dock-item" data-tv-focus="true" onClick={() => void runApp('selfmusic')}><Music2 size={19} /><span>SelfMusic</span></TVButton>
+        <TVButton focusKey="DOCK-selfmusic" className={'dock-item' + (view === 'selfmusic' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'selfmusic' ? 'page' : undefined} onClick={() => navigateToView('selfmusic')}><Music2 size={19} /><span>SelfMusic</span></TVButton>
         <TVButton focusKey="DOCK-settings" className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => navigateToView('settings')}><Settings2 size={19} /><span>Settings</span></TVButton>
         <TVButton focusKey="DOCK-assistant" className="dock-item dock-assistant" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={19} /><span>Voice / AI</span></TVButton>
       </nav>

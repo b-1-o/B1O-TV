@@ -7,6 +7,12 @@ TIZEN_CLI="${TIZEN_CLI:-$TOOLS_DIR/ide/bin/tizen}"
 SDB_CLI="${SDB_CLI:-$TOOLS_DIR/sdb}"
 PROFILE="${TIZEN_PROFILE:-B1O-Final}"
 TV_ADDR="${1:-192.168.1.22:26101}"
+# SDB device serials for Samsung TVs include port 26101. Accept either a bare
+# IP from the command line or the full serial shown by "sdb devices".
+TV_HOST="${TV_ADDR%%:*}"
+if [[ "$TV_ADDR" != *:* ]]; then
+  TV_ADDR="$TV_ADDR:26101"
+fi
 PACKAGE_ID="B1Otv00001"
 APP_ID="B1Otv00001.B1web"
 OUT_DIR="$ROOT/release-tizen"
@@ -30,6 +36,26 @@ fail() {
 
 [[ -x "$TIZEN_CLI" ]] || fail "Tizen CLI not found: $TIZEN_CLI. Set TIZEN_CLI or TIZEN_TOOLS."
 [[ -x "$SDB_CLI" ]] || fail "SDB not found: $SDB_CLI. Set SDB_CLI or TIZEN_TOOLS."
+
+# Do not waste time building and signing a WGT if SDB has no live TV target.
+# Samsung's default TV developer port is 26101; the target serial must appear
+# in "sdb devices" with state "device" before push/install/run commands work.
+printf '\n[Connect] Checking SDB connection to TV %s...\n' "$TV_ADDR"
+device_list="$("$SDB_CLI" devices 2>&1)" || fail "Could not list SDB devices: $device_list"
+if ! printf '%s\n' "$device_list" | awk -v target="$TV_ADDR" '$1 == target && $2 == "device" { found = 1 } END { exit !found }'; then
+  printf 'TV is not connected yet; attempting SDB connection...\n'
+  # Keep going after a non-zero connect response and verify actual device state
+  # below (SDB may report a stale/already-connected target while recovering).
+  # Samsung's TV docs use the bare IP here; SDB selects port 26101 by default.
+  "$SDB_CLI" connect "$TV_HOST" || true
+  device_list="$("$SDB_CLI" devices 2>&1)" || fail "Could not list SDB devices: $device_list"
+  printf '%s\n' "$device_list"
+  if ! printf '%s\n' "$device_list" | awk -v target="$TV_ADDR" '$1 == target && $2 == "device" { found = 1 } END { exit !found }'; then
+    fail "SDB still cannot see $TV_ADDR as a device. Enable Developer Mode on the TV, confirm its IP and that the TV and PC share a network, then run: \"$SDB_CLI\" connect $TV_ADDR"
+  fi
+fi
+printf 'SDB connection ready: %s\n' "$TV_ADDR"
+
 if [[ -n "$TIZENTUBE_WGT" && ! -s "$TIZENTUBE_WGT" ]]; then
   fail "TIZENTUBE_WGT does not exist or is empty: $TIZENTUBE_WGT"
 fi

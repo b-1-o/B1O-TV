@@ -6,11 +6,13 @@ import {
   Heart,
   Library,
   ListMusic,
+  ListPlus,
   LoaderCircle,
   LogOut,
   Music2,
   Pause,
   Play,
+  Plus,
   Repeat,
   Repeat1,
   Search,
@@ -18,6 +20,7 @@ import {
   SkipForward,
   Shuffle,
   Volume2,
+  X,
 } from 'lucide-react';
 import { TVButton, TVInput } from './FocusableControls';
 
@@ -144,6 +147,10 @@ export function SelfMusicPanel({
   const [playlists, setPlaylists] = useState<SelfMusicPlaylist[]>([]);
   const [activePlaylistId, setActivePlaylistId] = useState('');
   const [playlistTrackIds, setPlaylistTrackIds] = useState<string[]>([]);
+  const [playlistNameDraft, setPlaylistNameDraft] = useState('');
+  const [playlistCreating, setPlaylistCreating] = useState(false);
+  const [playlistPickerTrackId, setPlaylistPickerTrackId] = useState('');
+  const [playlistActionKey, setPlaylistActionKey] = useState('');
   const [scope, setScope] = useState<'library' | 'favorites'>('library');
   const [query, setQuery] = useState('');
   const [currentTrackId, setCurrentTrackId] = useState('');
@@ -395,6 +402,75 @@ export function SelfMusicPanel({
     }
   }, [accessToken, normalizedUrl, friendlyNetworkError, onAccessTokenChange]);
 
+  const createPlaylist = useCallback(async () => {
+    const name = playlistNameDraft.trim();
+    if (!name || !accessToken || !normalizedUrl || playlistCreating) return;
+    setPlaylistCreating(true);
+    setLoadError('');
+    try {
+      const body = asRecord(await apiRequest<unknown>(normalizedUrl, '/api/playlists', accessToken, {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      }));
+      const record = asRecord(body?.playlist);
+      if (typeof record?.id !== 'string') throw new Error('SelfMusic did not return the new playlist.');
+      const playlist: SelfMusicPlaylist = {
+        id: record.id,
+        name: asText(record.name, name),
+        trackCount: Number(record.trackCount ?? 0) || 0,
+      };
+      setPlaylists((previous) => [playlist, ...previous.filter((item) => item.id !== playlist.id)]);
+      setPlaylistNameDraft('');
+      setActivePlaylistId(playlist.id);
+      setPlaylistTrackIds([]);
+      setScope('library');
+      setPlaylistPickerTrackId('');
+      setStatusMessage('Playlist created · ' + playlist.name);
+    } catch (error) {
+      setLoadError(friendlyNetworkError(error));
+      if (error instanceof Error && /session expired|unauthorized/i.test(error.message.toLowerCase())) {
+        onAccessTokenChange('');
+      }
+    } finally {
+      setPlaylistCreating(false);
+    }
+  }, [playlistNameDraft, accessToken, normalizedUrl, playlistCreating, friendlyNetworkError, onAccessTokenChange]);
+
+  const addTrackToPlaylist = useCallback(async (playlist: SelfMusicPlaylist, track: SelfMusicTrack) => {
+    if (!accessToken || !normalizedUrl) return;
+    const actionKey = track.id + ':' + playlist.id;
+    setPlaylistActionKey(actionKey);
+    setLoadError('');
+    try {
+      const body = asRecord(await apiRequest<unknown>(
+        normalizedUrl,
+        '/api/playlists/' + encodeURIComponent(playlist.id) + '/tracks',
+        accessToken,
+        { method: 'POST', body: JSON.stringify({ trackId: track.id }) },
+      ));
+      const added = Number(body?.added ?? 0) > 0;
+      if (added) {
+        setPlaylists((previous) => previous.map((item) => item.id === playlist.id
+          ? { ...item, trackCount: item.trackCount + 1 }
+          : item));
+        if (activePlaylistId === playlist.id) {
+          setPlaylistTrackIds((previous) => previous.includes(track.id) ? previous : [...previous, track.id]);
+        }
+      }
+      setPlaylistPickerTrackId('');
+      setStatusMessage(added
+        ? track.title + ' added to ' + playlist.name + '.'
+        : track.title + ' is already in ' + playlist.name + '.');
+    } catch (error) {
+      setLoadError(friendlyNetworkError(error));
+      if (error instanceof Error && /session expired|unauthorized/i.test(error.message.toLowerCase())) {
+        onAccessTokenChange('');
+      }
+    } finally {
+      setPlaylistActionKey('');
+    }
+  }, [accessToken, normalizedUrl, activePlaylistId, friendlyNetworkError, onAccessTokenChange]);
+
   const createMediaTicket = useCallback(async (purpose: 'stream' | 'artwork', trackId: string) => {
     if (!accessToken || !normalizedUrl) throw new Error('Sign in to SelfMusic first.');
     const body = await apiRequest<unknown>(normalizedUrl, '/api/embed/media-tickets', accessToken, {
@@ -643,7 +719,11 @@ export function SelfMusicPanel({
                 <TVButton focusKey="SELFMUSIC-TAB-FAVORITES" className={'selfmusic-filter-tab' + (scope === 'favorites' ? ' is-active' : '')} data-tv-focus="true" onClick={() => { setScope('favorites'); setActivePlaylistId(''); setPlaylistTrackIds([]); }}><Heart size={15} /> Favorites <span>{favoriteIds.length}</span></TVButton>
                 <span className="selfmusic-playlist-count"><ListMusic size={15} /> {playlists.length} playlists</span>
               </div>
-              {playlists.length ? <div className="selfmusic-playlist-strip" aria-label="Your playlists">{playlists.map((playlist) => <TVButton key={playlist.id} focusKey={'SELFMUSIC-PLAYLIST-' + playlist.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)} className={'selfmusic-playlist-chip' + (activePlaylistId === playlist.id ? ' is-active' : '')} data-tv-focus="true" onClick={() => void openPlaylist(playlist)} title={'Play playlist ' + playlist.name} aria-pressed={activePlaylistId === playlist.id}><ListMusic size={13} /><span>{playlist.name}</span><small>{playlist.trackCount}</small></TVButton>)}</div> : null}
+              <form className="selfmusic-playlist-create" onSubmit={(event) => { event.preventDefault(); void createPlaylist(); }}>
+                <TVInput focusKey="SELFMUSIC-NEW-PLAYLIST" data-tv-focus="true" value={playlistNameDraft} onChange={(event) => setPlaylistNameDraft(event.target.value)} placeholder="New playlist name…" aria-label="New playlist name" maxLength={100} />
+                <TVButton focusKey="SELFMUSIC-CREATE-PLAYLIST" className="selfmusic-create-playlist-button" data-tv-focus="true" type="submit" disabled={playlistCreating || !playlistNameDraft.trim()}>{playlistCreating ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />} Create playlist</TVButton>
+              </form>
+              {playlists.length ? <div className="selfmusic-playlist-strip" aria-label="Your playlists">{playlists.map((playlist) => <TVButton key={playlist.id} focusKey={'SELFMUSIC-PLAYLIST-' + playlist.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)} className={'selfmusic-playlist-chip' + (activePlaylistId === playlist.id ? ' is-active' : '')} data-tv-focus="true" onClick={() => void openPlaylist(playlist)} title={'Open playlist ' + playlist.name} aria-pressed={activePlaylistId === playlist.id}><ListMusic size={13} /><span>{playlist.name}</span><small>{playlist.trackCount}</small></TVButton>)}</div> : null}
               <div className="selfmusic-track-list" role="list" aria-label="Music tracks">
                 {loadingLibrary ? <div className="selfmusic-empty"><LoaderCircle className="spin" size={22} /><strong>Loading your library…</strong></div>
                   : visibleTracks.length ? visibleTracks.slice(0, 400).map((track, index) => {
@@ -651,14 +731,26 @@ export function SelfMusicPanel({
                     const imageUrl = ticket ? normalizedUrl + '/api/artwork/' + encodeURIComponent(track.id) + '?ticket=' + encodeURIComponent(ticket) : '';
                     const favorite = favoriteIds.includes(track.id);
                     return (
-                      <div className={'selfmusic-track-row' + (track.id === currentTrackId ? ' is-current' : '')} key={track.id} role="listitem">
-                        <TVButton focusKey={'SELFMUSIC-TRACK-' + track.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)} className="selfmusic-track-select" data-tv-focus="true" onClick={() => void playTrack(track)} aria-label={'Play ' + track.title}>
-                          <span className="selfmusic-track-number">{busyTrackId === track.id ? <LoaderCircle className="spin" size={17} /> : track.id === currentTrackId && isPlaying ? <Volume2 size={16} /> : String(index + 1).padStart(2, '0')}</span>
-                          <span className="selfmusic-track-thumb">{imageUrl ? <img src={imageUrl} alt="" loading="lazy" /> : <Music2 size={18} />}</span>
-                          <span className="selfmusic-track-row-copy"><strong>{track.title}</strong><small>{track.artist}{track.album ? ' · ' + track.album : ''}</small></span>
-                          <span className="selfmusic-track-length">{formatTime(track.duration)}</span>
-                        </TVButton>
-                        <TVButton focusKey={'SELFMUSIC-FAVORITE-' + track.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 55)} className={'selfmusic-favorite-button' + (favorite ? ' is-favorite' : '')} data-tv-focus="true" disabled={favoriteBusyId === track.id} onClick={() => void toggleFavorite(track)} aria-label={favorite ? 'Remove ' + track.title + ' from favorites' : 'Add ' + track.title + ' to favorites'}>{favoriteBusyId === track.id ? <LoaderCircle className="spin" size={15} /> : <Heart size={16} fill={favorite ? 'currentColor' : 'none'} />}</TVButton>
+                      <div className="selfmusic-track-row-wrap" key={track.id}>
+                        <div className={'selfmusic-track-row' + (track.id === currentTrackId ? ' is-current' : '')} role="listitem">
+                          <TVButton focusKey={'SELFMUSIC-TRACK-' + track.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)} className="selfmusic-track-select" data-tv-focus="true" onClick={() => void playTrack(track)} aria-label={'Play ' + track.title}>
+                            <span className="selfmusic-track-number">{busyTrackId === track.id ? <LoaderCircle className="spin" size={17} /> : track.id === currentTrackId && isPlaying ? <Volume2 size={16} /> : String(index + 1).padStart(2, '0')}</span>
+                            <span className="selfmusic-track-thumb">{imageUrl ? <img src={imageUrl} alt="" loading="lazy" /> : <Music2 size={18} />}</span>
+                            <span className="selfmusic-track-row-copy"><strong>{track.title}</strong><small>{track.artist}{track.album ? ' · ' + track.album : ''}</small></span>
+                            <span className="selfmusic-track-length">{formatTime(track.duration)}</span>
+                          </TVButton>
+                          <TVButton focusKey={'SELFMUSIC-FAVORITE-' + track.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 55)} className={'selfmusic-favorite-button' + (favorite ? ' is-favorite' : '')} data-tv-focus="true" disabled={favoriteBusyId === track.id} onClick={() => void toggleFavorite(track)} aria-label={favorite ? 'Remove ' + track.title + ' from favorites' : 'Add ' + track.title + ' to favorites'}>{favoriteBusyId === track.id ? <LoaderCircle className="spin" size={15} /> : <Heart size={16} fill={favorite ? 'currentColor' : 'none'} />}</TVButton>
+                          <TVButton focusKey={'SELFMUSIC-ADD-TO-PLAYLIST-' + track.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 50)} className="selfmusic-add-playlist-button" data-tv-focus="true" onClick={() => setPlaylistPickerTrackId((current) => current === track.id ? '' : track.id)} aria-label={'Add ' + track.title + ' to a playlist'} aria-expanded={playlistPickerTrackId === track.id}><ListPlus size={16} /></TVButton>
+                        </div>
+                        {playlistPickerTrackId === track.id ? (
+                          <div className="selfmusic-playlist-picker glass-panel" role="group" aria-label={'Choose a playlist for ' + track.title}>
+                            <div className="selfmusic-playlist-picker-heading"><span>Add to playlist</span><TVButton className="selfmusic-picker-close" data-tv-focus="true" onClick={() => setPlaylistPickerTrackId('')} aria-label="Close playlist picker"><X size={14} /></TVButton></div>
+                            {playlists.length ? playlists.map((playlist) => {
+                              const actionKey = track.id + ':' + playlist.id;
+                              return <TVButton key={playlist.id} focusKey={'SELFMUSIC-ADD-' + track.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 36) + '-' + playlist.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24)} className="selfmusic-playlist-choice" data-tv-focus="true" disabled={playlistActionKey === actionKey} onClick={() => void addTrackToPlaylist(playlist, track)}>{playlistActionKey === actionKey ? <LoaderCircle className="spin" size={14} /> : <ListMusic size={14} />}<span>{playlist.name}</span></TVButton>;
+                            }) : <span className="selfmusic-playlist-picker-empty">Create a playlist above, then add tracks here.</span>}
+                          </div>
+                        ) : null}
                       </div>
                     );
                   }) : <div className="selfmusic-empty"><Music2 size={25} /><strong>{activePlaylistId ? 'This playlist is empty' : scope === 'favorites' ? 'No favorites yet' : query ? 'No matches' : 'Your library is empty'}</strong><span>{activePlaylistId ? 'This playlist has no tracks in the current library.' : scope === 'favorites' ? 'Mark tracks with the heart to find them here.' : 'Add music to your SelfMusic server and refresh the library.'}</span></div>}

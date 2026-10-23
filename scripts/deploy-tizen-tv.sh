@@ -9,6 +9,7 @@ PROFILE="${TIZEN_PROFILE:-B1O-Final}"
 TV_ADDR="${1:-192.168.1.22:26101}"
 # SDB device serials for Samsung TVs include port 26101. Accept either a bare
 # IP from the command line or the full serial shown by "sdb devices".
+TV_HOST="${TV_ADDR%%:*}"
 if [[ "$TV_ADDR" != *:* ]]; then
   TV_ADDR="$TV_ADDR:26101"
 fi
@@ -45,7 +46,8 @@ if ! printf '%s\n' "$device_list" | awk -v target="$TV_ADDR" '$1 == target && $2
   printf 'TV is not connected yet; attempting SDB connection...\n'
   # Keep going after a non-zero connect response and verify actual device state
   # below (SDB may report a stale/already-connected target while recovering).
-  "$SDB_CLI" connect "$TV_ADDR" || true
+  # Samsung's TV docs use the bare IP here; SDB selects port 26101 by default.
+  "$SDB_CLI" connect "$TV_HOST" || true
   device_list="$("$SDB_CLI" devices 2>&1)" || fail "Could not list SDB devices: $device_list"
   printf '%s\n' "$device_list"
   if ! printf '%s\n' "$device_list" | awk -v target="$TV_ADDR" '$1 == target && $2 == "device" { found = 1 } END { exit !found }'; then

@@ -19,13 +19,13 @@ jobs:
       - run: npm run typecheck:assistant
       - run: npm run lint
       - run: npm run test
-      - run: npm run build
-      - name: Generate Samsung TV launcher icon from assets/logo.jpg
+      - name: Install ImageMagick for TV asset optimization
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
-          convert assets/logo.jpg -resize '117x117^' -gravity center -extent 117x117 -strip PNG32:dist/icon.png
-          test -s dist/icon.png
+      - run: npm run build
+      - name: Verify Samsung TV launcher icon
+        run: test -s dist/icon.png
       - name: Assemble TV-ready web project
         run: |
           mkdir -p tv-package

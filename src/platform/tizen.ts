@@ -5,6 +5,7 @@ interface TizenApplicationInfo {
   name: string;
   iconPath?: string;
   version?: string;
+  show?: boolean;
 }
 
 interface TizenInputDeviceKey {
@@ -193,21 +194,29 @@ export function getInstalledApps(): Promise<InstalledTVApp[]> {
   return new Promise((resolve) => {
     manager.getAppsInfo(
       (apps) => {
+        const preferred = ['youtube', 'netflix', 'selfmusic', 'jellyfin', 'spotify', 'plex', 'prime video', 'disney', 'apple tv', 'hulu', 'twitch', 'browser', 'internet'];
+        const matchesPinnedService = (app: TizenApplicationInfo) => {
+          const text = (app.name + ' ' + app.id).toLocaleLowerCase('en-US');
+          return /youtube|tizen.?tube|netflix|self.?music|jellyfin|spotify|plex|prime.?video|disney|apple.?tv|hulu|twitch|browser|internet/.test(text);
+        };
         const normalized = apps
           .filter((app) => (
             typeof app.id === 'string'
             && typeof app.name === 'string'
             && app.id !== 'B1Otv00001.B1web'
             && app.name.toLocaleLowerCase('en-US') !== 'b1o tv'
+            // Mirror the custom-tv launcher: prefer apps marked visible by Tizen,
+            // while retaining the named media apps even when the metadata is incomplete.
+            && (app.show === true || matchesPinnedService(app))
           ))
           .map((app) => ({
             id: app.id,
             name: app.name,
             iconPath: app.iconPath,
             version: app.version,
+            show: app.show,
           }))
           .sort((a, b) => {
-            const preferred = ['youtube', 'netflix', 'selfmusic', 'jellyfin', 'spotify', 'plex', 'prime video', 'disney', 'apple tv', 'hulu', 'twitch', 'browser', 'internet'];
             const rank = (app: TizenApplicationInfo) => {
               const text = (app.name + ' ' + app.id).toLocaleLowerCase('en-US');
               const index = preferred.findIndex((hint) => text.includes(hint));

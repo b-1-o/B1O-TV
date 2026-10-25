@@ -82,7 +82,7 @@ Enter the Worker origin (or `/api/assistant` endpoint) and the same device token
 
 ## Releases
 
-Visit [GitHub Releases](https://github.com/b-1-o/B1web/releases) for packaged builds. Release archives contain the TV web project, not a certificate-signed WGT. Sign the app with your own Samsung TV certificate before installation. To publish a release, open **Actions → Publish Release**, run the workflow with a semantic version such as `0.4.0`, and check the generated release notes and archive.
+When published, each GitHub Release provides an AI-ready ZIP kit and a standalone unsigned `B1O-TV-unsigned.wgt`. The ZIP includes `PROMPT.md`, `AGENTS.md`, the installation playbook, and the prebuilt TV app. Import the WGT into Apps2Samsung for local signing/installation, or use Tizen Studio with your own certificate; never send an unsigned WGT directly through SDB. TizenTube is installed separately from its official project if it is missing. To publish a release, open **Actions → Publish Release**, run the workflow with a semantic version such as `0.4.0`, and verify the release assets and generated notes.
 
 ## Performance and platform limits
 

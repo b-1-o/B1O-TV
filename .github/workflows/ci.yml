@@ -57,7 +57,7 @@ jobs:
       - name: Upload TV-ready project
         uses: actions/upload-artifact@v4
         with:
-          name: B1O-TV-TV-Project
+          name: B1O-TV-AI-Install-Kit
           path: tv-package/
           if-no-files-found: error
           retention-days: 30

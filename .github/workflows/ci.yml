@@ -35,7 +35,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
-      - run: npm run package:tizen-web
+      - run: npm run package:tizen-web -- --output "release-tizen/B1O-TV-unsigned.wgt"
       - name: Verify Samsung TV launcher icon and unsigned WGT
         run: |
           test -s dist/icon.png

@@ -2558,3 +2558,90 @@ button:disabled { transform: none; }
     transition: none !important;
   }
 }
+
+/* B1O TV neutral glass correction: keep surfaces translucent when focused.
+   Focus is a quiet white edge, not a blue/opaque replacement surface. */
+.app-shell {
+  background:
+    radial-gradient(ellipse at 52% 12%, rgba(255,255,255,.035), transparent 38%),
+    radial-gradient(ellipse at 4% 78%, rgba(255,255,255,.018), transparent 36%),
+    radial-gradient(ellipse at 98% 92%, rgba(255,255,255,.018), transparent 31%),
+    linear-gradient(135deg, #050505 0%, #101010 48%, #060606 100%) !important;
+}
+.app-shell.tv-runtime .glass-panel,
+.app-shell.tv-runtime .featured-card,
+.app-shell.tv-runtime .catalog-card,
+.app-shell.tv-runtime .installed-row,
+.app-shell.tv-runtime .library-card,
+.app-shell.tv-runtime .settings-card,
+.app-shell.tv-runtime .note-area,
+.app-shell.tv-runtime .empty-state,
+.app-shell.tv-runtime .search-box,
+.app-shell.tv-runtime .notice-card,
+.app-shell.tv-runtime .wallpaper-choice,
+.app-shell.tv-runtime .home-installed-app.glass-panel,
+.app-shell.tv-runtime .weather-panel,
+.app-shell.tv-runtime .selfmusic-now-playing,
+.app-shell.tv-runtime .selfmusic-library,
+.app-shell.tv-runtime .selfmusic-login-card,
+.app-shell.tv-runtime .selfmusic-setup-card,
+.app-shell.tv-runtime .selfmusic-playlist-picker {
+  border-color: rgba(255,255,255,.18) !important;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.012) 48%, rgba(255,255,255,.03)),
+    rgba(10,10,10,.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.19),
+    inset 0 -1px 0 rgba(255,255,255,.035), 0 14px 38px rgba(0,0,0,.22) !important;
+}
+.app-shell.tv-runtime .floating-dock {
+  border-color: rgba(255,255,255,.22) !important;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.09), rgba(255,255,255,.018) 52%, rgba(255,255,255,.045)),
+    rgba(12,12,12,.24) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3),
+    inset 0 -1px 0 rgba(255,255,255,.035), 0 14px 40px rgba(0,0,0,.26) !important;
+}
+.app-shell.tv-runtime .forecast-day,
+.app-shell.tv-runtime .chat-message.user p,
+.app-shell.tv-runtime .assistant-capabilities,
+.app-shell.tv-runtime .selfmusic-track-thumb,
+.app-shell.tv-runtime .selfmusic-filter-tab.is-active,
+.app-shell.tv-runtime .selfmusic-track-row.is-current .selfmusic-track-select,
+.app-shell.tv-runtime .selfmusic-playlist-chip.is-active {
+  border-color: rgba(255,255,255,.14) !important;
+  background: rgba(255,255,255,.055) !important;
+}
+.app-shell.tv-runtime [data-tv-focused="true"],
+.app-shell.tv-runtime .tv-focusable--focused {
+  outline: 2px solid rgba(255,255,255,.82) !important;
+  outline-offset: 3px !important;
+  border-color: rgba(255,255,255,.58) !important;
+  background-color: rgba(255,255,255,.025) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.075), 0 12px 27px rgba(0,0,0,.32) !important;
+  color: #fff !important;
+  filter: none !important;
+  transform: none;
+}
+.app-shell.tv-runtime .dock-item[data-tv-focused="true"],
+.app-shell.tv-runtime .dock-item.tv-focusable--focused {
+  outline-width: 2px !important;
+  outline-offset: 2px !important;
+  background-color: rgba(255,255,255,.035) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.08), 0 10px 24px rgba(0,0,0,.28) !important;
+}
+.app-shell.tv-runtime .weather-panel,
+.app-shell.tv-runtime .forecast-panel,
+.app-shell.tv-runtime .assistant-panel.glass-panel {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.014) 50%, rgba(255,255,255,.03)),
+    rgba(8,8,8,.34) !important;
+}
+.app-shell.tv-runtime .jellyfin-art,
+.app-shell.tv-runtime .music-art {
+  background: radial-gradient(ellipse at 42% 30%, rgba(255,255,255,.075), transparent 56%),
+    linear-gradient(145deg, #151515, #080808) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.tv-runtime [data-tv-focused="true"],
+  .app-shell.tv-runtime .tv-focusable--focused { transform: none !important; }
+}

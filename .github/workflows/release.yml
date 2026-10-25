@@ -53,7 +53,7 @@ jobs:
           const manifestPath = 'public/config.xml';
           const rawManifest = fs.readFileSync(manifestPath, 'utf8');
           // Match the app version on the <widget> element, not the XML declaration's version="1.0".
-          const widgetVersion = /(<widget\\b[^>]*\\bversion=")[^"]+(\")/;
+          const widgetVersion = /(<widget\b[^>]*\bversion=")[^"]+(")/;
           if (!widgetVersion.test(rawManifest)) {
             throw new Error('Could not find the widget version attribute in public/config.xml');
           }

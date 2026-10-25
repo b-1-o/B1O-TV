@@ -192,7 +192,9 @@ function App() {
     if (viewExitTimer.current !== undefined) window.clearTimeout(viewExitTimer.current);
     if (viewEnterTimer.current !== undefined) window.clearTimeout(viewEnterTimer.current);
 
-    const motion = getViewMotionTiming(settings.reduceMotion, isTizenRuntime());
+    const systemPrefersReducedMotion = typeof window !== 'undefined'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motion = getViewMotionTiming(settings.reduceMotion || systemPrefersReducedMotion, isTizenRuntime());
     if (!motion) {
       setView(nextView);
       setViewMotion('');

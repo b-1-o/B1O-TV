@@ -52,7 +52,7 @@ npm run build
 
 ## Install on Samsung Tizen
 
-Read the English [installation guide](docs/INSTALL.md) and [TV setup and test guide](docs/TV-SETUP.md). The deployment helper is available as `npm run deploy:tizen -- <TV_IP>:26101`; review `scripts/deploy-tizen-tv.sh` and set your own certificate profile/tools paths. A web-project archive is not a signed `.wgt`. Each user must sign a TV package with their own Samsung certificate.
+Read the English [installation guide](docs/INSTALL.md), [TV setup and test guide](docs/TV-SETUP.md), and [TV performance guide](docs/PERFORMANCE.md). The deployment helper is available as `npm run deploy:tizen -- <TV_IP>:26101`; review `scripts/deploy-tizen-tv.sh` and set your own certificate profile/tools paths. A web-project archive is not a signed `.wgt`. Each user must sign a TV package with their own Samsung certificate.
 
 ## Configure Jellyfin
 
@@ -103,4 +103,4 @@ docs/                        English installation, setup, and roadmap
 scripts/                     Tizen packaging and asset optimization
 ```
 
-See [ROADMAP.md](docs/ROADMAP.md), [TV-SETUP.md](docs/TV-SETUP.md), and [the Worker guide](worker/README.md).
+See [ROADMAP.md](docs/ROADMAP.md), [TV-SETUP.md](docs/TV-SETUP.md), [PERFORMANCE.md](docs/PERFORMANCE.md), and [the Worker guide](worker/README.md).

@@ -2890,3 +2890,22 @@ button:disabled { transform: none; }
   transform: none !important;
   transition: none !important;
 }
+
+
+/* The explicit setting and operating-system preference both disable non-essential motion. */
+.app-shell.reduce-motion *,
+.app-shell.reduce-motion *::before,
+.app-shell.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell *,
+  .app-shell *::before,
+  .app-shell *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

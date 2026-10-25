@@ -46,7 +46,7 @@ describe('Jellyfin URL helpers', () => {
 
 describe('Jellyfin API requests', () => {
   it('loads the available users and server ID using the API key', async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/Users')) {
         return new Response(JSON.stringify([{ Id: 'user-1', Name: 'Erik' }]), { status: 200 });

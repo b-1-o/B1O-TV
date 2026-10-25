@@ -1,87 +1,136 @@
 # B1O TV
 
-**B1O TV** — экспериментальная мультимедийная среда для Samsung Smart TV на Tizen. Это обычное приложение, не замена ОС и не системный лаунчер.
+**B1O TV** is a personal media dashboard for Samsung Smart TVs running Tizen. It is a regular installable TV application, not a replacement operating system or system-level Home launcher.
 
-Цель — сделать комфортный экран управления домашним медиа в тёмном, туманном, стеклянном стиле: часы, погода, каталог приложений, Jellyfin, SelfMusic, настройки и голосовой AI-ассистент.
+The goal is a calm, monochrome, translucent-glass home screen for a personal media setup: clock, weather, TV apps, Jellyfin, the built-in SelfMusic player, and a voice/text AI assistant.
 
-> Статус: начальная разработка. Веб-прототип не считается готовым продуктом, пока не проверены упаковка, подпись, навигация пультом и API на реальном телевизоре.
+## Features
 
-## Принципы
+- **TV-first navigation:** directional remote controls, focusable buttons, Enter/Back handling, and a bottom dock.
+- **Neutral Liquid Glass UI:** translucent grayscale surfaces, wallpaper-led atmosphere, and remote focus styling that does not turn selected cards into blue blocks.
+- **Home dashboard:** clock, date, current weather, and a seven-day forecast.
+- **App catalog:** featured services and installed-app discovery/launch where supported by Tizen.
+- **Media:** Jellyfin launch and an embedded SelfMusic player.
+- **AI assistant:** text chat through Cloudflare Workers AI, local notes, timers, time queries, and supported app-launch commands.
+- **Voice input:** browser speech recognition or TV microphone recording with the protected Worker transcription endpoint, if the firmware exposes these capabilities.
+- **Personal settings:** wallpapers, city, temperature units, adaptive scenery, reduced motion, server URLs, AI endpoint, and device token.
+- **Setup transfer:** export/import settings as a JSON file.
+- **TV performance path:** avoids expensive live backdrop blur in the Tizen runtime and supports reduced motion.
 
-- TV-first: пульт, крупные фокусируемые элементы, предсказуемая навигация по стрелкам и Enter/Back.
-- Производительность важнее эффектов: CSS-атмосфера вместо тяжёлого постоянного Canvas/WebGL; поддержка reduced motion.
-- Рабочие состояния вместо фальшивых интеграций: недоступные функции отмечаются явно.
-- Настройки и выбранные приложения сохраняются локально; секреты AI-провайдера никогда не помещаются в клиентское приложение.
-- Без root и без попыток подменять системный Home.
+## Requirements
 
-## Что уже закладывается в проект
+- Node.js 20+ and npm.
+- For a real Samsung TV: Tizen Studio, a TV certificate profile, Developer Mode, and a reachable TV on your local network.
+- For AI responses and speech transcription: a deployed Cloudflare Worker with a Workers AI binding and an ASSISTANT_TOKEN secret.
+- For media playback: reachable Jellyfin and/or SelfMusic servers.
 
-- Главный экран с часами, датой, погодой и избранными приложениями.
-- Каталог и поиск приложений.
-- Тихий многослойный градиентный фон без зерна, сдержанные стеклянные панели, адаптация под 16:9 и более узкие окна.
-- Настройки города, вида и reduced motion.
-- Временный Dynamic Island для ассистента, таймера и сохранённой музыкальной сессии; панель ассистента с текстовым и поддерживаемым голосовым вводом.
-- Адаптер Tizen для чтения списка установленных приложений и запуска приложения, когда Web API доступен.
-- Проверки, инструкции и явные ограничения для функций, требующих телевизора.
-
-## Запуск прототипа
-
-Требуется Node.js 20+.
+## Run locally
 
 ```sh
 npm install
 npm run dev
 ```
 
-Production build:
-
-```sh
-npm run build
-npm run preview
-```
-
-Проверки:
+Checks and production build:
 
 ```sh
 npm run typecheck
 npm run lint
-npm run test
+npm test
+npm run build
+npm run preview
 ```
 
-## Samsung Tizen
+The browser preview is useful for UI checks. Native Tizen app discovery, app launching, and TV microphone behavior must be tested on the actual television.
 
-В `public/config.xml` хранится манифест Samsung TV. Для пошаговой установки на реальный телевизор, создания сертификата, Developer Mode, подключения Device Manager, сборки `.wgt` и импорта настроек с ПК см. [полную инструкцию на русском](docs/INSTALL-RU.md) и [технические заметки по TV](docs/TV-SETUP.md). CI публикует готовую production web-сборку как артефакт `B1O-TV-TV-Project`; в ней генерируется PNG-значок на основе `assets/logo.jpg`. Архив — не подписанный `.wgt`: установочный пакет нужно подписать собственным Samsung TV certificate profile в Tizen Studio.
+## Install on Samsung Tizen
 
-### Важные ограничения, не скрытые в интерфейсе
+1. Follow the detailed [Russian installation guide](docs/INSTALL-RU.md) for Developer Mode, certificates, device connection, signing, and WGT installation.
+2. Review [TV setup notes](docs/TV-SETUP.md).
+3. Build with `npm run build`.
+4. Package and sign the app in Tizen Studio with your own Samsung TV certificate profile. A production web-build archive is not itself a signed `.wgt`.
+5. Verify remote navigation, Enter/Back, app discovery, weather, media connectivity, and voice behavior on the TV.
 
-1. **Кнопка микрофона.** Приложение пытается найти голосовую клавишу через `tizen.tvinputdevice.getSupportedKeys()` и зарегистрировать её, если прошивка разрешает. Если кнопка зарезервирована системой или не раскрыта API, автоматическое открытие/запись с пульта не сработает. Это обязательно проверить на реальном Q60D; `Alt+V` предназначен только для браузерного предпросмотра.
-2. **Разговорный AI.** Cloudflare Workers AI backend развёрнут для текущего адреса и защищён секретом `ASSISTANT_TOKEN`; в настройках TV нужно указать URL Worker и тот же токен устройства. При изменении hostname Worker синхронизируй его с `public/config.xml`. Ключи моделей хранятся только на сервере.
-3. **Таймеры и память.** Прототипные таймеры и заметки живут в приложении/локальном хранилище. Пока приложение закрыто или выгружено системой, нельзя обещать системные уведомления или фоновые таймеры.
-4. **Запуск приложений.** Tizen может предоставить список установленных приложений и API запуска при наличии привилегий. Имя/ID YouTube, Jellyfin и других приложений зависят от фактической установки; приложение не предполагает выдуманные ID.
-5. **YouTube без рекламы.** B1O TV запускает совместимый сторонний клиент, если тот установлен; само приложение не удаляет рекламу из официального YouTube. Кандидаты для проверки и установка описаны в [инструкции Samsung TV](docs/TV-SETUP.md). Совместимость с Q60D пока не подтверждена.
-6. **Системные настройки и HDMI.** Обычное приложение имеет ограниченный доступ; в оболочке эти команды должны быть скрыты/отключены, если платформа их не предоставляет.
+The helper is available via `npm run deploy:tizen`. Review `scripts/deploy-tizen-tv.sh` first and make sure its device address and certificate setup match your environment.
 
-## Архитектура
+## Configure the AI assistant
 
-- `src/app`: оболочка, маршруты и TV-навигация.
-- `src/components`: элементы интерфейса.
-- `src/platform`: адаптеры браузера/Tizen.
-- `src/services`: погода, локальные таймеры и настройки.
-- `src/styles`: дизайн-система и фоновые эффекты.
-- `docs`: проверки на реальном телевизоре, интеграции и границы API.
+The frontend does not contain model-provider API keys. The Worker uses the Cloudflare Workers AI binding.
 
-## План до релиза
+1. Read [the Worker README](worker/README.md).
+2. Deploy from the repository root:
 
-- [ ] Собрать и проверить web-прототип в браузере.
-- [ ] Пройти навигацию только пультом (стрелки, Enter, Back).
-- [ ] Создать/подписать WGT и установить на свой Samsung TV.
-- [ ] Проверить список/запуск приложений и реальный ID каждого клиента.
-- [ ] Проверить на телевизоре, появляется ли кнопка микрофона в поддерживаемых клавишах и разрешается ли её регистрация.
-- [x] Добавить AI Worker с проверкой токена, timeout, ограничением длины ввода/истории и безопасной обработкой ошибок.
-- [x] Развернуть Worker, настроить секрет `ASSISTANT_TOKEN` и добавить его origin в `public/config.xml`.
-- [ ] Настроить rate limiting/лимиты запросов в Cloudflare и проверить AI на реальном телевизоре.
-- [ ] Протестировать погоду при потере сети, запуске после перезагрузки и длительном простое.
-- [ ] Измерить FPS/память на TV и уменьшить/отключить тяжёлые эффекты при необходимости.
-- [ ] Выполнить проверку YouTube-клиента отдельно и задокументировать совместимость.
+   ```sh
+   npx wrangler login
+   npx wrangler deploy --config worker/wrangler.toml
+   ```
 
-См. [план реализации](docs/ROADMAP.md), [настройку Samsung TV](docs/TV-SETUP.md) и [AI Worker](worker/README.md).
+3. Generate a private device token and set it as a Worker secret:
+
+   ```sh
+   openssl rand -hex 32
+   npx wrangler secret put ASSISTANT_TOKEN --config worker/wrangler.toml
+   ```
+
+   Paste the generated value when Wrangler asks for the secret. Never commit or publish it.
+
+4. On B1O TV, open **Settings → AI & Voice**, enter the Worker origin (or full `/api/assistant` URL), and paste the same token into **Device token**.
+5. Use **Check AI Connection** to test the authenticated endpoint and get a real model response. This makes a small AI request.
+6. Use **Test Voice Assistant** separately: a working text connection does not guarantee microphone capture or speech synthesis on the TV.
+
+The default model in `worker/wrangler.toml` is `@cf/zai-org/glm-4.7-flash`. The Worker exposes `/health`, `/api/assistant`, and `/api/transcribe`. AI answers may be wrong. The assistant does not remotely change system TV settings; local notes, timers, and supported app launches are handled by the TV app.
+
+## Configure Jellyfin and SelfMusic
+
+Open **Settings → Media Services** and enter the addresses reachable by the TV.
+
+- Use HTTPS for public endpoints.
+- HTTP is accepted by the app only for local/private network addresses, such as a LAN host or private Tailscale address.
+- A Jellyfin URL can look like `http://192.168.1.10:8096`.
+- For SelfMusic, use the exact server origin displayed in the embedded player. If required by your server's policy, add that origin to `SELF_MUSIC_ALLOWED_ORIGINS` in its private environment file.
+
+Do not expose personal media services to the public internet without appropriate access controls. Keep server credentials private.
+
+## Project structure
+
+```text
+src/
+  App.tsx                    Main TV interface and screen-level behavior
+  components/tv/             Focusable TV controls and SelfMusic panel
+  contexts/                  Theme context
+  platform/                  Tizen APIs and remote-key navigation
+  services/                  Assistant intents, AI client, and weather
+  styles.css                 Responsive UI, glass materials, TV-specific styles
+worker/
+  src/index.ts               Cloudflare AI and transcription API
+  wrangler.toml              Worker and AI model configuration
+docs/
+  INSTALL-RU.md              Russian Samsung TV installation guide
+  TV-SETUP.md                TV API and configuration notes
+  ROADMAP.md                 Implementation roadmap
+scripts/
+  deploy-tizen-tv.sh         Tizen packaging/deployment helper
+  optimize-tv-assets.mjs     Production asset optimization
+```
+
+## Known limitations
+
+- **No system launcher replacement:** Tizen applications cannot replace Samsung's system Home screen or freely access every TV setting.
+- **App discovery/launch:** depends on Tizen APIs, app privileges, and installed application IDs.
+- **Microphone:** Samsung firmware may reserve the microphone key or deny recording access. Test voice input on the actual TV.
+- **Timers:** timers work while the app is active; background alarms or notifications are not guaranteed after it closes or is unloaded.
+- **AI security:** the device token is stored in the TV app's local settings. Anyone who extracts it may be able to call the Worker. Rotate an exposed token and configure Cloudflare rate limits/usage alerts.
+- **Local notes:** stored in this app's local storage, not synced to a cloud database.
+- **YouTube:** B1O TV may launch an installed compatible third-party client; it does not remove ads from the official YouTube app.
+- **Real-TV verification:** a passing browser build does not prove every Tizen API works on every firmware version.
+
+## Release checklist
+
+- [ ] Verify all remote-navigation paths on the target Samsung TV.
+- [ ] Confirm real app IDs for Jellyfin and the preferred YouTube client.
+- [ ] Run **Check AI Connection** using the deployed Worker and device token.
+- [ ] Test voice capture and speech synthesis on the target firmware.
+- [ ] Measure memory and navigation responsiveness during extended use.
+- [ ] Verify Jellyfin/SelfMusic connectivity over LAN and private Tailscale access.
+
+See the [roadmap](docs/ROADMAP.md), [TV setup notes](docs/TV-SETUP.md), and [Worker documentation](worker/README.md).

@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck:assistant": "wrangler deploy --dry-run --config worker/wrangler.toml",
-    "deploy:tizen": "bash scripts/deploy-tizen-tv.sh"
+    "deploy:tizen": "bash scripts/deploy-tizen-tv.sh",
+    "package:tizen-web": "npm run build && node scripts/package-tizen-tv.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

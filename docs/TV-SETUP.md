@@ -18,13 +18,11 @@ Open `http://localhost:5173`. To test from another device, use the computer's LA
 
 ## 2. Build and install on Samsung Tizen
 
-1. Install Tizen Studio, Samsung TV Extension, and Samsung Certificate Extension.
-2. Enable Developer Mode on the TV and connect it using Device Manager.
-3. Create/select your own Samsung TV certificate profile.
-4. Build with `npm run build`, or use the deployment script after configuring the tools path and certificate profile.
-5. Install and launch the signed WGT over the local network. USB is not the normal WGT installation path for Samsung Smart TVs.
+Recommended: use [PROMPT.md](../PROMPT.md) with an AI agent and follow [AI-INSTALL.md](AI-INSTALL.md). The agent can build an unsigned WGT, use Apps2Samsung for TV discovery and local signing, and install TizenTube if it is missing.
 
-Read [INSTALL.md](INSTALL.md) for the full installation and update process. Never commit signing certificates or passwords.
+For the advanced Tizen Studio method, install Samsung Tizen Studio, TV Extension, and Certificate Extension; enable Developer Mode on the TV; create/select your own certificate profile; then use the deployment script after configuring its tools path and profile. The signed WGT is installed over the local network, not by opening it from USB.
+
+Never commit signing certificates or passwords.
 
 ## 3. Configure services
 

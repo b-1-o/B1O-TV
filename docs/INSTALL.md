@@ -4,12 +4,24 @@ B1O TV is a Tizen Web Application. The public web build is **not a signed WGT**:
 
 ## Requirements
 
-- Node.js 20+ and npm.
-- Samsung Tizen Studio, Samsung TV Extension, and Samsung Certificate Extension.
-- A Samsung TV with Developer Mode enabled and reachable on the same local network.
-- Your own Samsung TV certificate profile.
-- ImageMagick for launcher-icon generation and asset optimization.
-- Jellyfin and/or SelfMusic servers if you want personal media integration.
+- A Samsung TV running Tizen 6.0 or later for B1O TV's current manifest.
+- The TV and setup computer on the same local network.
+- For the recommended route: the official Apps2Samsung desktop installer and an AI agent with terminal access.
+- For a source build: Node.js 20+, npm, Python 3, and ImageMagick.
+- For the manual Tizen Studio route: Samsung Tizen Studio, TV Extension, Certificate Extension, Developer Mode, and your own certificate profile.
+- Jellyfin and/or SelfMusic servers only if you want those optional integrations.
+
+## Recommended: AI-assisted installation (B1O TV + TizenTube)
+
+1. Start from a source checkout, or download a release archive containing `PROMPT.md`, `docs/AI-INSTALL.md`, and `B1O-TV-unsigned.wgt`.
+2. Open `PROMPT.md` in an AI coding agent and provide terminal access. Browser access helps it check current official release instructions; desktop control helps it operate installer windows when supported.
+3. If the TV is not ready, enable Developer Mode on the TV, enter the host computer's local IP address, confirm, and reboot. This one-time step must be approved on the TV itself; follow Samsung's [official TV Device guide](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-device.html).
+4. Use the official [Apps2Samsung release](https://github.com/Apps2Samsung/Apps2Samsung/releases) to discover the TV and install the unsigned B1O TV WGT through its local signing flow. Install TizenTube only if it is missing. The current TizenTube Cobalt build targets Tizen 6+ and its official guide can require Partner signing for that app; do not reuse that signing mode for B1O TV unless the B1O signing requirements call for it.
+5. Launch B1O TV and verify the Home screen. Configure Jellyfin, SelfMusic, and AI only when the actual server URLs and credentials are available.
+
+Apps2Samsung is a third-party open-source installer, not a Samsung product. Download it only from its [official GitHub repository](https://github.com/Apps2Samsung/Apps2Samsung). The agent must never disable Samsung system apps, replace the system Home screen, factory-reset the TV, change router/DNS settings, or expose certificates and secrets. If the agent cannot control GUI windows, it must give exact steps and wait for the owner instead of claiming success.
+
+See [AI-INSTALL.md](AI-INSTALL.md) and [PROMPT.md](../PROMPT.md) for the complete agent procedure and fallback routes.
 
 ## Quick update on an already configured TV
 

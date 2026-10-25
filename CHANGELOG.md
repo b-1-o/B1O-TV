@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add an AI-agent installation playbook for Samsung Tizen TVs.
+- Package an unsigned WGT for local signing through a supported installer.
+- Add non-destructive TV/tool diagnostics and include the AI install prompt in release artifacts.
+
+
 Notable changes are documented here for each public version.
 
 ## 0.4.0 — 2026-10-25

@@ -8,3 +8,7 @@ coverage/
 
 release-tizen/
 .tizen-stage-*/
+
+# Python diagnostics/package helper
+__pycache__/
+*.py[cod]

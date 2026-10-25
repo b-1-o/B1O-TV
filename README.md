@@ -29,7 +29,7 @@ B1O TV combines a calm translucent-glass home screen, weather, Jellyfin Continue
 
 ## Quick start
 
-Requirements: Node.js 20+, npm, and (for a real TV) Tizen Studio, Samsung TV Extension, a certificate profile, and Developer Mode.
+Requirements: Node.js 20+ and npm for the browser preview. For a real TV, start with the AI-assisted installer in `PROMPT.md` and enable Developer Mode; Apps2Samsung is the recommended local signing and installation tool. Tizen Studio remains an advanced alternative.
 
 ```sh
 git clone https://github.com/b-1-o/B1web.git
@@ -52,7 +52,11 @@ npm run build
 
 ## Install on Samsung Tizen
 
-Read the English [installation guide](docs/INSTALL.md), [TV setup and test guide](docs/TV-SETUP.md), and [TV performance guide](docs/PERFORMANCE.md). The deployment helper is available as `npm run deploy:tizen -- <TV_IP>:26101`; review `scripts/deploy-tizen-tv.sh` and set your own certificate profile/tools paths. A web-project archive is not a signed `.wgt`. Each user must sign a TV package with their own Samsung certificate.
+**Recommended: AI-assisted installation.** Open [`PROMPT.md`](PROMPT.md) in Claude Code, Codex, Gemini CLI, or another agent with terminal access. It follows [the AI installation playbook](docs/AI-INSTALL.md), checks the environment, builds an unsigned WGT when source is available, and guides installation of B1O TV plus TizenTube when needed. The recommended companion tool is the official [Apps2Samsung desktop installer](https://github.com/Apps2Samsung/Apps2Samsung/releases), which can discover Samsung TVs, manage local signing, and install community apps.
+
+Samsung Tizen is not Android TV: CleanYourTV's Android/ADB debloating workflow does not apply to Samsung Tizen and cannot replace Samsung's system Home screen. B1O TV is a regular Tizen app. The setup flow does not disable system apps or change firmware.
+
+Read the English [installation guide](docs/INSTALL.md), [AI installation playbook](docs/AI-INSTALL.md), [TV setup and test guide](docs/TV-SETUP.md), and [TV performance guide](docs/PERFORMANCE.md). The advanced Tizen Studio deployment helper remains available as `npm run deploy:tizen -- <TV_IP>:26101`; set your own certificate profile and tools path. Release WGT files are unsigned: import them into a supported local signing installer such as Apps2Samsung, or sign them with your own Tizen Studio certificate before installing.
 
 ## Configure Jellyfin
 
@@ -99,8 +103,10 @@ src/
   services/                  AI assistant, Jellyfin API, and weather
   styles.css                 Grayscale glass materials and TV runtime styling
 worker/                      Cloudflare Workers AI backend
-docs/                        English installation, setup, and roadmap
-scripts/                     Tizen packaging and asset optimization
+docs/                        English installation, AI setup, performance, and roadmap guides
+scripts/                     TV diagnostics, WGT packaging, deployment, and asset optimization
+PROMPT.md                    Copy-paste AI-assisted installation prompt
+AGENTS.md                    Shared instructions for coding agents
 ```
 
-See [ROADMAP.md](docs/ROADMAP.md), [TV-SETUP.md](docs/TV-SETUP.md), [PERFORMANCE.md](docs/PERFORMANCE.md), and [the Worker guide](worker/README.md).
+See [AI-INSTALL.md](docs/AI-INSTALL.md), [ROADMAP.md](docs/ROADMAP.md), [TV-SETUP.md](docs/TV-SETUP.md), [PERFORMANCE.md](docs/PERFORMANCE.md), and [the Worker guide](worker/README.md).

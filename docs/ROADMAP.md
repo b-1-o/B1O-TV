@@ -1,75 +1,53 @@
-# B1O TV — план реализации
+# B1O TV Roadmap
 
-## Этап 1 — рабочий интерфейс (текущий)
+B1O TV is a remote-first, monochrome media home for Samsung Smart TVs running Tizen. The roadmap favors reliable navigation, quick startup, and useful personal-media workflows over visual effects that consume TV memory.
 
-- Главная: часы и дата по центру-слева, погода справа; при прокрутке компактный закреплённый header открывает секцию «Твоё медиа».
-- Каталог избранного и фактически обнаруженных приложений.
-- Управление с клавиатуры/пульта через фокусируемые кнопки и пространственную навигацию.
-- Настройки внешнего вида, города, ссылок Jellyfin/SelfMusic и AI endpoint.
-- Dynamic Island показывается только при активности: ассистент, работающий таймер или сохранённая музыкальная сессия.
-- Локальные команды: сохранить заметку, показать заметки, таймер, текущее время, запуск доступного приложения.
-- Никаких ключей AI-провайдера в клиентском коде.
+## Shipped in the current development line
 
-### Проверка перед следующей функцией
+- Home dashboard with clock, weather, forecast, wallpaper selection, and a compact media dock.
+- Neutral translucent-glass surfaces with a readable remote focus state.
+- Tizen app discovery and launching where the TV exposes the required APIs.
+- Embedded SelfMusic player with account sign-in, playlists, favorites, playback, and cover art.
+- Jellyfin API integration for a user-specific Continue Watching rail and playback progress.
+- Optional Cloudflare Workers AI assistant with local notes, timers, app-launch intents, and a protected speech-transcription endpoint.
+- English setup guides and a CI/release workflow.
+- Visibility-aware work scheduling: weather/Jellyfin polling and clock/timer intervals stop while B1O TV is hidden; embedded SelfMusic playback pauses when the app is hidden.
+- Predictable Back behavior: close the topmost surface first, return to Home from a page, and confirm exit from Home.
 
-```sh
-npm install
-npm run typecheck
-npm run lint
-npm run test
-npm run build
-```
+## Next priorities
 
-## Этап 2 — Tizen
+### 1. Remote-control acceptance
 
-1. Импортировать проект как web app в совместимую версию Tizen Studio/Samsung TV Extension.
-2. Убедиться, что манифест из public/config.xml попадает в корень итогового пакета.
-3. В Certificate Manager создать сертификат, доверенный конкретному телевизору.
-4. Проверить разрешения application.info/application.launch и сетевые домены.
-5. Подключить TV в Developer Mode, установить подписанный WGT, проверить запуск/выход и длительный простой.
-6. Сверить реальные имена/ID Jellyfin, YouTube-клиента и других приложений через список установленного ПО.
+- Exercise every dock item, every settings control, each modal, and every Home card using only the physical Samsung remote.
+- Verify ArrowDown enters the dock only at the end of a visible content column and ArrowUp restores the last focused item.
+- Test Back/Escape, Enter, long lists, disabled controls, native select menus, and text editing in settings.
+- Keep reproducible unit tests for key normalization and focus-boundary decisions; hardware validation is still required for each Tizen firmware family.
 
-## Этап 3 — AI backend
+### 2. Performance and lifecycle
 
-Исходник HTTPS endpoint находится в worker/. Он использует Workers AI binding, принимает POST JSON с message/history и возвращает JSON с reply. Перед использованием нужно задеплоить Worker и задать секрет ASSISTANT_TOKEN. Ключ модели остаётся на стороне Cloudflare.
+- Test a 30–60 minute session, opening and closing settings, switching to another TV app, and resuming B1O TV.
+- Inspect TV logs for memory growth, audio capture that remains active, repeated network requests, and focus loss.
+- Keep infinite animations, live blur, video backgrounds, and unnecessary polling off in the TV runtime.
+- Respect Tizen's lifecycle and avoid trying to terminate other installed/system apps from B1O TV.
 
-До подключения реального AI:
-- локальные команды продолжают работать без сети;
-- неизвестный вопрос показывает понятное объяснение;
-- сетевой запрос имеет тайм-аут;
-- ошибки не ломают интерфейс;
-- ответ модели трактуется как текст, не как исполняемый код.
+### 3. Personal media features
 
-Для таймеров/напоминаний необходимо решить, что должно работать, пока приложение не открыто. Локальный JavaScript-таймер не является системным будильником: если Tizen остановит приложение, сигнал/уведомление не гарантируются.
+- Add a unified Resume Hub that can restore the last SelfMusic track or playlist alongside Jellyfin Continue Watching.
+- Add Jellyfin playback position refresh and a clear "last synced" state.
+- Add a small universal search across Jellyfin and SelfMusic only where supported APIs make the results reliable.
+- Consider optional home-server health cards for Jellyfin, SelfMusic, and the AI Worker without blocking startup.
 
-## Этап 4 — разговорный голос
+### 4. Public release quality
 
-Нужно исследовать реальные возможности модели TV:
-- получает ли приложение событие от кнопки Voice/Microphone;
-- может ли приложение вызвать TV Voice Control API;
-- разрешён ли захват аудио и доступен ли распознаватель речи;
-- поддерживает ли среда озвучивание ответа.
+- Keep README, installation instructions, release notes, issue templates, and changelog in English.
+- Publish an unsigned TV web-project archive with each version; users sign their own WGT with their own certificate.
+- Attach verified screenshots from a real TV and a short remote-navigation recording before promoting a stable release.
+- Document supported Tizen versions, known limitations, privacy behavior, and reproducible bug reports.
 
-Web Speech API в браузере — лишь progressive enhancement, а не гарантия Tizen. Если кнопка микрофона зарезервирована ОС, понадобится поддерживаемый системный API или альтернативный микрофон/клиент-помощник.
+## Engineering rules
 
-## Этап 5 — медиа и интеграции
-
-- Jellyfin: отдельный официальный клиент или настроенный URL. Не дублировать полноценный видеоплеер, пока не выбрана стратегия DRM/поддержки кодеков.
-- SelfMusic: настроенный URL/доступный серверный API; реальные очередь и метаданные добавлять после проверки API SelfMusic.
-- YouTube: проверить существующий совместимый клиент на этой модели TV отдельно. Нельзя обещать ad-free-видео из обычного WebView; не изменять приложение YouTube из оболочки.
-- Универсальный поиск: агрегировать только те сервисы, которые предоставляют допустимый и работающий API.
-
-## UI-принципы
-
-- Без боковой панели, шумовой текстуры, дублирующих блоков и постоянного Dynamic Island.
-- Спокойный iOS-подобный силуэт: системная типографика, крупный часовой блок, одна погодная карточка, четыре основные плитки медиа.
-- Dynamic Island — UI-индикатор внутри B1O TV. Обычное Tizen-приложение не может рисовать его поверх отдельного внешнего приложения; для этого нужна системная интеграция, которой здесь нет.
-
-## Критерии качества
-
-- Все основные действия доступны пультом и ясно показывают фокус.
-- Нет постоянного тяжёлого Canvas/WebGL или больших видеофонов в оболочке.
-- Ошибки сети показываются локально и не блокируют навигацию.
-- Настройки безопасно обрабатывают недоступное localStorage.
-- Таймер показывает предупреждение, если ему нельзя гарантировать фоновые уведомления.
-- Установочный пакет подписан и проверен на реальном телевизоре.
+- Never put provider keys or private certificates in the frontend bundle.
+- Do not promise that Tizen can replace the system Home screen, force-close arbitrary apps, or show notifications while the app is suspended.
+- Every visible action must be reachable from the remote and have a clear selected state.
+- Network failures must leave the interface navigable.
+- Test TypeScript, Worker configuration, lint, unit tests, and production build before publishing.

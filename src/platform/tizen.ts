@@ -19,7 +19,12 @@ interface TizenInputDeviceManager {
   unregisterKey?(keyName: string): void;
 }
 
+interface TizenCurrentApplication {
+  exit(): void;
+}
+
 interface TizenApplicationManager {
+  getCurrentApplication?(): TizenCurrentApplication;
   getAppsInfo(
     success: (apps: TizenApplicationInfo[]) => void,
     error?: (reason: { name?: string; message?: string }) => void,
@@ -186,6 +191,18 @@ export function registerVoiceRemoteKey(onVoice: () => void): () => void {
   } catch {
     // Some firmware reserves the microphone key or does not expose the input-device API.
     return () => undefined;
+  }
+}
+
+/** Request exit for this B1O TV instance after the user confirms. */
+export function exitCurrentTVApp(): boolean {
+  const current = window.tizen?.application?.getCurrentApplication?.();
+  if (!current?.exit) return false;
+  try {
+    current.exit();
+    return true;
+  } catch {
+    return false;
   }
 }
 

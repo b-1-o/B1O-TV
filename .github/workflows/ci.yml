@@ -39,7 +39,7 @@ jobs:
         run: |
           mkdir -p tv-package
           cp -R dist/. tv-package/
-          cp docs/INSTALL-RU.md tv-package/INSTALL-RU.md
+          cp docs/INSTALL.md tv-package/INSTALL.md
           cp docs/TV-SETUP.md tv-package/TV-SETUP-REFERENCE.md
           cat > tv-package/SETUP-TRANSFER.txt <<'EOF'
           Configure B1O TV in the PC browser, then use Settings > Export TV Setup.

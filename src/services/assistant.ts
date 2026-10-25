@@ -18,7 +18,7 @@ const NOTES_KEY = 'b1o-tv:notes';
 export function parseLocalIntent(raw: string): LocalIntent | null {
   const text = raw.trim().toLocaleLowerCase('ru-RU');
 
-  const noteMatch = raw.trim().match(/^(?:пожалуйста\s+)?(?:запомни|запиши|remember)\s*[, :]?\s*(.+)$/i);
+  const noteMatch = raw.trim().match(/^(?:please\s+)?(?:запомни|запиши|remember(?:\s+that)?|save\s+(?:this\s+)?note|note\s+this)\s*[, :]?\s*(.+)$/i);
   if (noteMatch?.[1]) return { kind: 'remember', note: noteMatch[1].trim() };
 
   if (
@@ -26,18 +26,25 @@ export function parseLocalIntent(raw: string): LocalIntent | null {
     text.includes('что я просил запомнить') ||
     text.includes('покажи заметки') ||
     text.includes('список заметок') ||
-    text === 'мои заметки'
-  ) {
-    return { kind: 'recall' };
-  }
+    text === 'мои заметки' ||
+    text.includes('what do you remember') ||
+    text.includes('what did i ask you to remember') ||
+    text.includes('show my notes') ||
+    text.includes('list notes') ||
+    text === 'my notes' ||
+    text === 'show notes'
+  ) return { kind: 'recall' };
 
-  const timerMatch = text.match(/(?:таймер|отсч[её]т)[^\d]{0,28}(\d+)\s*(секунд(?:у|ы)?|сек|минут(?:у|ы)?|мин|час(?:а|ов)?|ч)(?=\s|$|[,.!?])/);
+  const units = '(?:секунд(?:у|ы)?|сек|seconds?|secs?|минут(?:у|ы)?|мин|minutes?|mins?|час(?:а|ов)?|ч|hours?|hrs?)';
+  const timerMatch =
+    text.match(new RegExp('(?:таймер|отсч[её]т|timer|countdown)[^\\d]{0,40}(\\d+)\\s*(' + units + ')(?=\\s|$|[,.!?])')) ??
+    text.match(new RegExp('(\\d+)\\s*(' + units + ')\\s+(?:таймер|timer|countdown)(?=\\s|$|[,.!?])'));
   if (timerMatch) {
     const amount = Number(timerMatch[1]);
     const unit = timerMatch[2];
-    const multiplier = /^(?:секунд|сек)/.test(unit)
+    const multiplier = /^(?:секунд|сек|second|sec)/.test(unit)
       ? 1_000
-      : /^(?:минут|мин)/.test(unit)
+      : /^(?:минут|мин|minute|min)/.test(unit)
         ? 60_000
         : 3_600_000;
     if (Number.isFinite(amount) && amount > 0 && amount * multiplier <= 24 * 60 * 60 * 1_000) {
@@ -45,21 +52,31 @@ export function parseLocalIntent(raw: string): LocalIntent | null {
     }
   }
 
-  if (text.includes('который час') || text.includes('сколько времени') || text.includes('текущее время')) {
-    return { kind: 'time' };
-  }
+  if (
+    text.includes('который час') ||
+    text.includes('сколько времени') ||
+    text.includes('текущее время') ||
+    /\b(?:what(?:'s| is) the time|what time is it|current time|tell me the time|time now)\b/.test(text)
+  ) return { kind: 'time' };
 
-  const launchRequested = /(открой|запусти|включи|перейди|open|launch|play)/.test(text);
-  if (launchRequested) {
+  if (/(открой|запусти|включи|перейди|open|launch|play|start|show|watch)/.test(text)) {
     if (text.includes('youtube') || text.includes('ютуб')) return { kind: 'launch', target: 'youtube' };
-    if (text.includes('jellyfin') || text.includes('джеллифин') || text.includes('фильм')) return { kind: 'launch', target: 'jellyfin' };
-    if (text.includes('selfmusic') || text.includes('селфмьюзик') || text.includes('музык')) return { kind: 'launch', target: 'selfmusic' };
-    if (text.includes('браузер') || text.includes('browser')) return { kind: 'launch', target: 'browser' };
+    if (
+      text.includes('jellyfin') || text.includes('джеллифин') ||
+      text.includes('фильм') || text.includes('movie') || text.includes('movies') ||
+      text.includes('film') || text.includes('films')
+    ) return { kind: 'launch', target: 'jellyfin' };
+    if (
+      text.includes('selfmusic') || text.includes('селфмьюзик') ||
+      text.includes('музык') || text.includes('music') || text.includes('song')
+    ) return { kind: 'launch', target: 'selfmusic' };
+    if (text.includes('браузер') || text.includes('browser') || text.includes('internet')) {
+      return { kind: 'launch', target: 'browser' };
+    }
   }
 
   return null;
 }
-
 export function readSavedNotes(): SavedNote[] {
   try {
     const value = localStorage.getItem(NOTES_KEY);

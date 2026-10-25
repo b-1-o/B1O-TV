@@ -15,6 +15,18 @@ function generatedFocusKey(prefix: string, reactId: string): string {
   return prefix + reactId.replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
+/**
+ * Norigin manages logical TV focus separately from DOM focus. Samsung's
+ * virtual keyboard can remain attached to a text input after logical focus
+ * moves elsewhere, causing later remote actions to reopen the keyboard.
+ */
+function blurInactiveTextEntry(nextTarget: HTMLElement | null): void {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLInputElement) && !(active instanceof HTMLTextAreaElement)) return;
+  if (active === nextTarget || active.type === 'checkbox' || active.type === 'radio' || active.type === 'range' || active.type === 'file') return;
+  active.blur();
+}
+
 export interface TVButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   focusKey?: string;
 }
@@ -35,7 +47,10 @@ export function TVButton({ focusKey, className, disabled, onClick, ...props }: T
   const mergedRef = useCallback((node: HTMLButtonElement | null) => mergeFocusRef(ref, buttonRef, node), [ref]);
 
   useEffect(() => {
-    if (focused) buttonRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+    if (!focused) return;
+    const button = buttonRef.current;
+    blurInactiveTextEntry(button);
+    button?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
   }, [focused]);
 
   return (
@@ -76,8 +91,10 @@ export function TVInput({ focusKey, className, disabled, type, ...props }: TVInp
       else input.focus();
       return;
     }
+    // Focusing a text-capable input is sufficient to request Samsung's
+    // on-screen keyboard. Calling click() as well can leave the TV IME bound
+    // to the field after the keyboard is dismissed.
     input.focus();
-    input.click();
   }, [disabled]);
   const handleArrowPress = useCallback((direction: string) => {
     const input = inputRef.current;
@@ -142,7 +159,10 @@ export function TVSelect({ focusKey, className, disabled, ...props }: TVSelectPr
   const mergedRef = useCallback((node: HTMLSelectElement | null) => mergeFocusRef(ref, selectRef, node), [ref]);
 
   useEffect(() => {
-    if (focused) selectRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+    if (!focused) return;
+    const select = selectRef.current;
+    blurInactiveTextEntry(select);
+    select?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
   }, [focused]);
 
   return (

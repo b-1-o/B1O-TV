@@ -6,7 +6,7 @@ TOOLS_DIR="${TIZEN_TOOLS:-$HOME/tizen-studio-baseline/tools}"
 TIZEN_CLI="${TIZEN_CLI:-$TOOLS_DIR/ide/bin/tizen}"
 SDB_CLI="${SDB_CLI:-$TOOLS_DIR/sdb}"
 PROFILE="${TIZEN_PROFILE:-B1O-Final}"
-TV_ADDR="${1:-192.168.1.22:26101}"
+TV_ADDR="${1:-}"
 PACKAGE_ID="B1Otv00001"
 APP_ID="B1Otv00001.B1web"
 OUT_DIR="$ROOT/release-tizen"
@@ -28,6 +28,7 @@ fail() {
   exit 1
 }
 
+[[ -n "$TV_ADDR" ]] || fail "Pass the TV address as an argument, e.g. npm run deploy:tizen -- 192.168.1.50:26101"
 [[ -x "$TIZEN_CLI" ]] || fail "Tizen CLI not found: $TIZEN_CLI. Set TIZEN_CLI or TIZEN_TOOLS."
 [[ -x "$SDB_CLI" ]] || fail "SDB not found: $SDB_CLI. Set SDB_CLI or TIZEN_TOOLS."
 if [[ -n "$TIZENTUBE_WGT" && ! -s "$TIZENTUBE_WGT" ]]; then

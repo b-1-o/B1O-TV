@@ -30,7 +30,9 @@ import {
 import type { ActiveTimer, AppTarget, AssistantMessage, InstalledTVApp, TVApp, TVSettings, View, WeatherSnapshot } from './types';
 import { createAssistantMessage, askConfiguredAssistant, formatDuration, parseLocalIntent, readSavedNotes, saveNote, transcribeRecordedAudio } from './services/assistant';
 import { describeWeather, fetchWeather } from './services/weather';
-import { getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, listenSamsungVoiceInteraction, registerSamsungVoiceInteraction, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
+import { isAppVisible, subscribeToAppVisibility } from './platform/appLifecycle';
+import { getRemoteDirection, isBackKey, isTizenBackKey, isVoiceKey, resolveVerticalDockTarget } from './platform/remoteNavigation';
+import { exitCurrentTVApp, getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, listenSamsungVoiceInteraction, registerSamsungVoiceInteraction, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
 import { CardGrid, FocusGroup } from './components/tv/CardGrid';
 import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
 import { DEFAULT_CONFIG } from './defaultConfig';
@@ -144,6 +146,8 @@ function App() {
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [forecastOpen, setForecastOpen] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [appVisible, setAppVisible] = useState(isAppVisible);
   const [weatherError, setWeatherError] = useState('');
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [installedApps, setInstalledApps] = useState<InstalledTVApp[]>([]);
@@ -218,10 +222,14 @@ function App() {
     return apps;
   }, []);
 
+  useEffect(() => subscribeToAppVisibility(setAppVisible), []);
+
   useEffect(() => {
+    if (!appVisible) return;
+    setNow(new Date());
     const clock = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(clock);
-  }, []);
+  }, [appVisible]);
 
   useEffect(() => {
     if (isTizenRuntime()) {
@@ -248,9 +256,14 @@ function App() {
   }, [settings, notify]);
 
   useEffect(() => {
+    if (!appVisible) {
+      setWeatherLoading(false);
+      return;
+    }
     let active = true;
     const controller = new AbortController();
     const load = async () => {
+      if (!appVisible) return;
       setWeatherLoading(true);
       setWeatherError('');
       try {
@@ -270,13 +283,17 @@ function App() {
       controller.abort();
       window.clearInterval(refresh);
     };
-  }, [settings.city]);
+  }, [settings.city, appVisible]);
 
-  useEffect(() => { void refreshInstalledApps(); }, [refreshInstalledApps]);
+  useEffect(() => { if (appVisible) void refreshInstalledApps(); }, [refreshInstalledApps, appVisible]);
   
   // Load the selected user's Continue Watching row. Debouncing avoids repeated API calls
   // while the server URL or key is being edited in Settings.
   useEffect(() => {
+    if (!appVisible) {
+      setJellyfinResumeLoading(false);
+      return;
+    }
     const serverUrl = settings.jellyfinUrl.trim();
     const apiKey = settings.jellyfinApiKey.trim();
     const userId = settings.jellyfinUserId.trim();
@@ -315,7 +332,7 @@ function App() {
       window.clearTimeout(debounce);
       controller.abort();
     };
-  }, [settings.jellyfinUrl, settings.jellyfinApiKey, settings.jellyfinUserId, jellyfinRefreshVersion]);
+  }, [settings.jellyfinUrl, settings.jellyfinApiKey, settings.jellyfinUserId, jellyfinRefreshVersion, appVisible]);
 
 
   useEffect(() => registerSpatialRemoteKeys(), []);
@@ -325,6 +342,23 @@ function App() {
     setAssistantOpen(true);
     window.setTimeout(() => voiceStartRef.current(), 80);
   }), []);
+
+  useEffect(() => {
+    if (appVisible) return;
+    if (voiceRecorderTimerRef.current !== undefined) {
+      window.clearTimeout(voiceRecorderTimerRef.current);
+      voiceRecorderTimerRef.current = undefined;
+    }
+    try {
+      if (voiceRecorderRef.current?.state !== 'inactive') voiceRecorderRef.current?.stop();
+    } catch { /* The TV runtime may already have stopped audio capture. */ }
+    voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
+    voiceStreamRef.current = null;
+    setVoiceListening(false);
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch { /* Speech synthesis is optional. */ }
+    }
+  }, [appVisible]);
 
   useEffect(() => () => {
     if (voiceRecorderTimerRef.current !== undefined) window.clearTimeout(voiceRecorderTimerRef.current);
@@ -343,6 +377,10 @@ function App() {
       setRemainingMs(0);
       return;
     }
+    if (!appVisible) {
+      setRemainingMs(Math.max(0, timer.endAt - Date.now()));
+      return;
+    }
     const update = () => {
       const next = timer.endAt - Date.now();
       if (next <= 0) {
@@ -355,17 +393,22 @@ function App() {
     update();
     const interval = window.setInterval(update, 1_000);
     return () => window.clearInterval(interval);
-  }, [timer, notify]);
+  }, [timer, notify, appVisible]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target;
       const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
-      const isTizenBack = event.keyCode === 10009 || event.key === 'BrowserBack';
-      const isBack = event.key === 'Escape' || event.key === 'Backspace' || isTizenBack;
+      const isTizenBack = isTizenBackKey(event.key, event.keyCode);
+      const isBack = isBackKey(event.key, event.keyCode, isTyping);
 
-      // Backspace in a text field edits text; it must not navigate away.
-      if (isBack && (!isTyping || isTizenBack || event.key === 'Escape')) {
+      // Back closes the topmost surface first, then the current page, then asks before exit.
+      if (isBack) {
+        if (exitConfirmOpen) {
+          event.preventDefault();
+          setExitConfirmOpen(false);
+          return;
+        }
         if (forecastOpen) {
           event.preventDefault();
           setForecastOpen(false);
@@ -381,9 +424,14 @@ function App() {
           navigateToView('home');
           return;
         }
+        if (isTizenRuntime() && (isTizenBack || event.key === 'Escape' || event.key === 'Backspace')) {
+          event.preventDefault();
+          setExitConfirmOpen(true);
+          return;
+        }
       }
 
-      const micKey = event.key === 'Microphone' || event.key === 'AudioInputMicrophone' || event.key.toLocaleLowerCase().includes('microphone');
+      const micKey = isVoiceKey(event.key);
       if (micKey) {
         event.preventDefault();
         setAssistantClosing(false);
@@ -401,7 +449,7 @@ function App() {
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [assistantOpen, forecastOpen, view, closeAssistant, navigateToView]);
+  }, [assistantOpen, forecastOpen, exitConfirmOpen, view, closeAssistant, navigateToView]);
 
   const preferredFocusKey = view === 'home'
     ? 'CARD-youtube'
@@ -424,14 +472,12 @@ function App() {
     return () => window.clearTimeout(focusTimer);
   }, [view, preferredFocusKey]);
 
-  // Keep the bottom dock reachable with the Samsung remote even when spatial
-  // navigation considers the content cards a separate focus group.
+  // Keep the bottom dock reachable and restore the last content item on ArrowUp.
   useEffect(() => {
     const onRemoteVerticalKey = (event: KeyboardEvent) => {
-      const goDown = event.key === 'ArrowDown' || event.key === 'Down' || event.keyCode === 40;
-      const goUp = event.key === 'ArrowUp' || event.key === 'Up' || event.keyCode === 38;
-      if (!goDown && !goUp) return;
-      if (assistantOpen || forecastOpen) return;
+      const direction = getRemoteDirection(event.key, event.keyCode);
+      if (direction !== 'up' && direction !== 'down') return;
+      if (assistantOpen || forecastOpen || exitConfirmOpen) return;
 
       const target = event.target;
       if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
@@ -439,43 +485,47 @@ function App() {
 
       const focused = document.querySelector<HTMLElement>('[data-tv-focused="true"]');
       if (!focused) return;
-      const inDock = focused.closest('.floating-dock');
+      const inDock = Boolean(focused.closest('.floating-dock'));
+      let hasFocusableBelow = false;
 
-      if (goUp && inDock) {
-        const rememberedKey = lastContentFocusKeyRef.current;
-        const targetKey = rememberedKey && doesFocusableExist(rememberedKey)
-          ? rememberedKey
-          : doesFocusableExist(preferredFocusKey) ? preferredFocusKey : 'BRAND-HOME';
-        event.preventDefault();
-        event.stopPropagation();
-        setFocus(targetKey);
-        return;
+      if (direction === 'down' && !inDock) {
+        const main = focused.closest<HTMLElement>('.main-content');
+        if (!main) return;
+        const currentRect = focused.getBoundingClientRect();
+        hasFocusableBelow = Array.from(main.querySelectorAll<HTMLElement>('[data-tv-focus="true"]')).some((element) => {
+          if (element === focused || ('disabled' in element && Boolean((element as HTMLButtonElement).disabled))) return false;
+          const style = window.getComputedStyle(element);
+          if (style.display === 'none' || style.visibility === 'hidden') return false;
+          const rect = element.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0 && rect.top > currentRect.top + 8;
+        });
       }
 
-      if (!goDown || inDock) return;
-      const main = focused.closest<HTMLElement>('.main-content');
-      if (!main) return;
-      const currentRect = focused.getBoundingClientRect();
-      const hasFocusableBelow = Array.from(main.querySelectorAll<HTMLElement>('[data-tv-focus="true"]')).some((element) => {
-        if (element === focused || ('disabled' in element && Boolean((element as HTMLButtonElement).disabled))) return false;
-        const style = window.getComputedStyle(element);
-        if (style.display === 'none' || style.visibility === 'hidden') return false;
-        const rect = element.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 && rect.top > currentRect.top + 8;
+      const rememberedKey = lastContentFocusKeyRef.current;
+      const targetKey = resolveVerticalDockTarget({
+        direction,
+        inDock,
+        modalOpen: assistantOpen || forecastOpen || exitConfirmOpen,
+        hasFocusableBelow,
+        lastContentFocusKey: rememberedKey,
+        lastContentFocusExists: Boolean(rememberedKey && doesFocusableExist(rememberedKey)),
+        preferredFocusKey,
+        preferredFocusExists: doesFocusableExist(preferredFocusKey),
       });
-      if (hasFocusableBelow) return;
+      if (!targetKey) return;
 
-      const currentFocusKey = focused.getAttribute('data-tv-focus-key');
-      if (currentFocusKey) lastContentFocusKeyRef.current = currentFocusKey;
+      if (direction === 'down') {
+        const currentFocusKey = focused.getAttribute('data-tv-focus-key');
+        if (currentFocusKey) lastContentFocusKeyRef.current = currentFocusKey;
+      }
       event.preventDefault();
       event.stopPropagation();
-      setFocus('DOCK-apps');
+      setFocus(targetKey);
     };
 
     window.addEventListener('keydown', onRemoteVerticalKey, true);
     return () => window.removeEventListener('keydown', onRemoteVerticalKey, true);
-  }, [assistantOpen, forecastOpen, preferredFocusKey]);
-
+  }, [assistantOpen, forecastOpen, exitConfirmOpen, preferredFocusKey]);
   useEffect(() => {
     if (!assistantOpen) return;
     const focusTimer = window.setTimeout(() => {
@@ -491,6 +541,14 @@ function App() {
     }, 0);
     return () => window.clearTimeout(focusTimer);
   }, [forecastOpen]);
+
+  useEffect(() => {
+    if (!exitConfirmOpen) return;
+    const focusTimer = window.setTimeout(() => {
+      if (doesFocusableExist('EXIT-CANCEL')) setFocus('EXIT-CANCEL');
+    }, 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [exitConfirmOpen]);
 
 
   const connectJellyfin = async () => {
@@ -1198,6 +1256,27 @@ function App() {
         <TVButton focusKey="DOCK-settings" className={'dock-item' + (view === 'settings' ? ' active' : '')} data-tv-focus="true" aria-current={view === 'settings' ? 'page' : undefined} onClick={() => navigateToView('settings')}><Settings2 size={19} /><span>Settings</span></TVButton>
         <TVButton focusKey="DOCK-assistant" className="dock-item dock-assistant" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={19} /><span>Voice / AI</span></TVButton>
       </nav>
+
+
+      {exitConfirmOpen && (
+        <div className="forecast-overlay exit-confirm-overlay" role="presentation">
+          <FocusGroup focusKey="EXIT-DIALOG" focusBoundary className="exit-confirm-panel glass-panel" role="alertdialog" aria-modal="true" aria-labelledby="exit-confirm-title">
+            <div className="exit-confirm-icon"><Info size={24} /></div>
+            <span className="eyebrow small">B1O TV</span>
+            <h2 id="exit-confirm-title">Exit B1O TV?</h2>
+            <p>Return to the TV app screen? Your settings are saved automatically.</p>
+            <div className="exit-confirm-actions">
+              <TVButton focusKey="EXIT-CANCEL" className="secondary-button" data-tv-focus="true" onClick={() => setExitConfirmOpen(false)}>Stay in B1O TV</TVButton>
+              <TVButton focusKey="EXIT-CONFIRM" className="secondary-button" data-tv-focus="true" onClick={() => {
+                if (!exitCurrentTVApp()) {
+                  setExitConfirmOpen(false);
+                  notify('The TV runtime did not allow B1O TV to exit. Use the remote Home button to leave.');
+                }
+              }}>Exit B1O TV</TVButton>
+            </div>
+          </FocusGroup>
+        </div>
+      )}
 
       {forecastOpen && (
         <div className="forecast-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setForecastOpen(false); }}>

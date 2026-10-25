@@ -26,6 +26,8 @@ export interface TVSettings {
   aiEndpoint: string;
   aiToken: string;
   jellyfinUrl: string;
+  jellyfinApiKey: string;
+  jellyfinUserId: string;
   selfMusicUrl: string;
   speakReplies: boolean;
   wallpaper: string;

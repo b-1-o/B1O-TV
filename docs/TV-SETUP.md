@@ -1,92 +1,80 @@
-# Samsung TV / Tizen: настройка и проверка
+# Samsung TV / Tizen Setup and Test Guide
 
-## Сначала локальный предпросмотр — без телевизора
+## 1. Run the browser preview
 
-Из корня репозитория запусти:
+From the repository root:
 
 ```sh
 npm install
 npm run typecheck
+npm run typecheck:assistant
 npm run lint
 npm test
 npm run build
 npm run dev
 ```
 
-Открой `http://localhost:5173` на этом компьютере. Для браузера на другом устройстве в той же сети используй LAN-адрес компьютера с портом `5173`. Здесь можно проверить погоду и прогноз, настройки, темы/обои, анимации, карточки приложений и AI UI. В браузере нельзя запустить нативное Tizen-приложение: кнопка внешнего приложения должна показать понятную причину, а не падать.
+Open `http://localhost:5173`. To test from another device, use the computer's LAN address and port 5173. The preview can exercise layout, settings, local assistant intents, and keyboard focus, but it cannot prove that Samsung-specific APIs work on the TV.
 
-Для SelfMusic в **Settings → Media Services** укажи адрес его сервера, обычно `http://<IP-компьютера>:8787`, а не адрес B1O preview на порту 5173. При открытии SelfMusic введи свой обычный логин/пароль на странице SelfMusic; не записывай пароль в URL и не сохраняй его в настройках B1O TV. Поддерживаются как общий пароль сервера, так и управляемые аккаунты.
+## 2. Build and install on Samsung Tizen
 
-## YouTube без рекламы
+1. Install Tizen Studio, Samsung TV Extension, and Samsung Certificate Extension.
+2. Enable Developer Mode on the TV and connect it using Device Manager.
+3. Create/select your own Samsung TV certificate profile.
+4. Build with `npm run build`, or use the deployment script after configuring the tools path and certificate profile.
+5. Install and launch the signed WGT over the local network. USB is not the normal WGT installation path for Samsung Smart TVs.
 
-В B1O TV карточка YouTube запускает **отдельное приложение**, если оно установлено. Сам клиент не встроен в B1O TV WGT и не может блокировать рекламу в официальном YouTube.
+Read [INSTALL.md](INSTALL.md) for the full installation and update process. Never commit signing certificates or passwords.
 
-Первый вариант для проверки — [YouTube for Tizen](https://github.com/SushyDev/tizen-youtube). Его upstream `app/config.xml` использует приложение `tUb3Xq7Lm9.Tube`; именно этот ID B1O теперь распознаёт, помимо названий. Проект описывает установку через Tizen Homebrew либо сборку WGT. Проверь его актуальную инструкцию, модель и прошивку перед установкой; B1O не скачивает и не устанавливает чужой WGT автоматически.
+## 3. Configure services
 
-Для варианта из промпта B1O умеет напрямую запрашивать запуск приложения с ID `Ad6NutHP8l.TizenTube`; привилегия `http://tizen.org/privilege/application.launch` уже есть в `public/config.xml`. Если приложение не установлено, B1O покажет ошибку вместо сбоя. **Важное уточнение:** запуск TizenTube по ID сам по себе не гарантирует блокировку рекламы/SponsorBlock. README проекта [TIZEN-TUBE](https://github.com/MAUIXER/TIZEN-TUBE) указывает, что для этих функций может потребоваться его сопутствующий сервер/launcher. Не будем обещать «без рекламы», пока отдельно не проверим именно этот сценарий на локальной конфигурации.
+### Jellyfin
 
-## Вдохновение от custom-tv и CleanYourTV
+In **Settings → Media Services**, enter the reachable server URL, create a key under **Dashboard → Advanced → API Keys**, paste it in **Jellyfin API key**, and select **Connect to Jellyfin**. Pick the user whose viewing progress should be shown. Home then loads that user's Continue Watching items and progress bars. Selecting a card opens Jellyfin Web details so you can choose Resume/Play.
 
-- [custom-tv](https://github.com/berteotti/custom-tv) — приложение именно для Samsung Tizen. Из его подхода в B1O используются идеи remote-first списка настоящих установленных приложений, порядка популярных сервисов и лёгкого интерфейса телевизора. Это не копия его исходников.
-- [CleanYourTV](https://github.com/Gathin23/cleanyourtv) ориентирован на Android TV / Google TV и Android Debug Bridge (ADB), а не на Samsung Tizen. Его установщик, команды ADB и скрипты отключения системных приложений нельзя использовать на Tizen. Из его дизайна использованы только идеи тёмного экрана, полки приложений и спокойного выделения фокуса.
+Use HTTPS for public endpoints. HTTP is allowed only for private/local network URLs. The API key is stored in local app settings; exported TV setup files also contain it, so keep exports private. Revoke an exposed key from the Jellyfin Dashboard.
 
+### SelfMusic
 
+Enter the SelfMusic server URL in **Settings → Media Services**. Sign in from the built-in player with the server's normal account flow. If the server checks allowed browser origins, add the exact origin shown by the player to `SELF_MUSIC_ALLOWED_ORIGINS` in the server's private environment file, then restart SelfMusic. Do not place a password in a URL.
 
-- Node.js 20+ и npm.
-- Совместимая версия Tizen Studio, Samsung TV Extension и Certificate Extension.
-- Samsung TV с включённым Developer Mode в локальной сети.
-- Сертификат, с которым телевизор разрешает установку приложения.
+### AI assistant
 
-## Сборка веб-части
+Deploy the Worker and set `ASSISTANT_TOKEN` as a Cloudflare Worker secret. In **Settings → AI & Voice**, enter the Worker origin (or `/api/assistant` endpoint) and the same device token. Use **Check AI Connection** before testing voice. Voice recording depends on the TV firmware; Samsung Voice Interaction navigation is not the same as speech-to-text.
 
-```sh
-npm install
-npm run typecheck
-npm run test
-npm run build
-```
+## 4. Remote-control acceptance matrix
 
-Сборка появляется в каталоге dist/. Шаблон TV-манифеста находится в public/config.xml и копируется Vite в корень dist/.
+Run these checks on the actual TV, not only in a desktop browser.
 
-Перед упаковкой проверь application id/package в config.xml через Samsung/Tizen project tooling. В шаблоне используется идентификатор B1Otv00001; если Tizen Studio назначает другой идентификатор проекту, манифест нужно синхронизировать с ним.
-
-## Установка WGT
-
-1. Импортировать/создать Samsung TV Web Application проект в Tizen Studio.
-2. Перенести содержимое dist/ в корень приложения так, чтобы index.html, config.xml, icon.png и icon.svg находились на одном уровне.
-3. Проверить профиль TV, версию Tizen, доступы и сетевые домены в config.xml.
-4. Подписать пакет выбранным сертификатным профилем. Нельзя публиковать приватные сертификаты/ключи или добавлять их в Git.
-5. Подключиться к телевизору через Device Manager, установить WGT и запустить из списка приложений.
-
-Команды установки различаются по версии SDK и конфигурации сертификата; используй Tizen Studio/Samsung TV Extension для текущего телевизора, а не копируй случайную команду из инструкции под другой Tizen.
-
-## Матрица проверки на телевизоре
-
-| Проверка | Что должно произойти |
+| Scenario | Expected behavior |
 | --- | --- |
-| Запуск/закрытие | Главная загружается, без пустого/чёрного экрана |
-| Стрелки и Enter | Видимый фокус перемещается между элементами; Enter активирует |
-| Back / Escape | Закрывает ассистента или возвращает на главную |
-| Приложения | Реальные названия/ID видны в каталоге; запуск проверяется отдельно |
-| Погода | При сети обновляется; без сети интерфейс остаётся доступным |
-| Настройки | Город, ссылки и вид сохраняются после повторного запуска |
-| Таймер | Отображается обратный отсчёт; при истечении приложение показывает сообщение, пока оно активно |
-| AI endpoint | Укажи URL Worker или полный путь `/api/assistant`; запрос получает `{ reply }` |
-| Микрофон | Проверить событие физической кнопки отдельно; Alt+V действует только в браузерном предпросмотре |
-| Производительность | Нет длительных зависаний, анимации отключаются настройкой Reduce motion |
+| Home opens | Initial focus is visible; there is no blank screen or focus hidden behind the dock. |
+| Left/Right | Focus moves between items in the current row or dock without skipping randomly. |
+| Down through content | Focus continues through visible rows; at the last row, Down enters the dock. |
+| Up from dock | Focus returns to the last valid content control, falling back to the current view's default if that control disappeared. |
+| Enter | Activates the selected control once; disabled controls cannot be activated. |
+| Back in a dialog | Closes only the topmost dialog and restores a useful focus target. |
+| Back on a page | Returns to Home. |
+| Back on Home | Opens an exit confirmation; cancel keeps B1O TV open. |
+| Backspace while typing | Edits text and does not navigate away. |
+| Hidden/resumed app | Weather and Jellyfin polling pause while hidden, then refresh when B1O TV is visible again. Embedded SelfMusic audio pauses when hidden. |
+| Network/API error | An inline message appears; navigation and settings remain usable. |
+| Long session | No repeated polling while hidden, stuck microphone capture, or noticeable focus drift. |
 
-## SelfMusic, Jellyfin и сеть
+Unit tests cover key normalization and focus-boundary rules. They cannot replace a physical-remote run on the target TV.
 
-В **Settings → Media Services** укажи адрес сервиса, который телевизор действительно может открыть. На TV `localhost` указывает на сам телевизор, а не на компьютер. Для домашнего сервера это обычно IP-адрес компьютера в LAN плюс порт веб-интерфейса; для удалённого доступа нужен рабочий HTTPS/Tailscale-маршрут, доступный именно телевизору. Приложение разрешает HTTPS для публичных адресов и HTTP только для localhost/private LAN/Tailscale IPv4, и открывает URL в новом окне с переходом в текущее, если popup блокируется.
+## 5. Performance and background behavior
 
-Манифест версии 0.3.0 включает WARP-доступ к настраиваемым сервисным URL, поскольку один фиксированный origin не может заранее покрыть изменяемые LAN/Tailscale-адреса. Поэтому URL проверяется перед открытием; не вставляй в него логины или пароли.
+The Tizen manifest sets `background-support="disable"`. The app also observes `visibilitychange`, `pagehide`, and `pageshow`: its clock and timer intervals stop while hidden, weather/Jellyfin requests are aborted or skipped, and SelfMusic playback pauses. On resume, the clock updates immediately and eligible service data reloads.
 
-## Голос и AI
+Tizen controls the lifecycle of other apps and system services. B1O TV does not try to kill or disable Samsung system apps; that is not a safe or portable way to improve performance. Background behavior varies by TV model and firmware.
 
-На Samsung Tizen Web Speech API не поддерживается, поэтому `SpeechRecognition` не может быть единственным способом записи голоса. B1O использует Samsung Voice Interaction API для голосовой навигации и выбора элементов; он **не отдаёт приложению произвольную расшифровку фразы**. Для диктовки в AI приложение дополнительно пробует записать короткий аудиофрагмент через `getUserMedia` / `MediaRecorder` и отправить его на защищённый Worker endpoint `/api/transcribe`, где Workers AI Whisper возвращает текст. Возможность захвата аудио зависит от прошивки и того, предоставляет ли TV микрофон веб-приложению; кнопка микрофона пульта может оставаться системной и не отдавать аудиопоток приложению.
+The Tizen runtime disables live backdrop filters and unnecessary background animation. The design keeps subtle transitions and neutral focus outlines rather than replacing surfaces with opaque blue fills.
 
-Для облачной диктовки разверни Worker после изменения `worker/src/index.ts`, оставь `ASSISTANT_TOKEN` как секрет и укажи тот же Device token в Settings → AI & Voice. Аудио ограничено короткой записью, токен проверяется до вызова модели, аудио не сохраняется. API-ключи провайдера нельзя встраивать в JavaScript или в TV WGT.
+## 6. Known limitations
 
-## Сетевые разрешения
-
-Манифест включает Open-Meteo, настроенный AI Worker, Samsung Voice Interaction и попытку доступа к медиазахвату. После изменений `public/config.xml` снова выполни `npm run build`, перенеси свежий `dist/` в Tizen Studio, подпиши WGT своим существующим профилем `B1O-Final` и установи на TV. Если hostname Worker изменится, обнови соответствующий origin в манифесте.
+- B1O TV is a regular Tizen app, not a replacement for Samsung's system Home screen.
+- A clicked Jellyfin item opens a details page in Jellyfin Web; launching a precise item directly in a separate Jellyfin TV client depends on that client supporting deep links.
+- Timers are not system alarms and cannot guarantee a notification while the app is suspended or closed.
+- Voice recording depends on TV firmware permissions and microphone exposure.
+- App discovery and app launch depend on the installed app IDs, privileges, and firmware.

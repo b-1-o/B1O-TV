@@ -36,6 +36,7 @@ import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
 import { DEFAULT_CONFIG } from './defaultConfig';
 import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
 import { SelfMusicPanel } from './components/tv/SelfMusicPanel';
+import { fetchJellyfinResume, fetchJellyfinUsers, getJellyfinItemUrl, getJellyfinPosterUrl, getJellyfinProgressPercent, type JellyfinResumeItem, type JellyfinUser } from './services/jellyfin';
 
 const SETTINGS_KEY = 'b1o-tv:settings';
 const TIMER_KEY = 'b1o-tv:timer';
@@ -133,6 +134,13 @@ function App() {
   const [selfMusicNowPlaying, setSelfMusicNowPlaying] = useState('');
   const [selfMusicAccessToken, setSelfMusicAccessToken] = useState('');
   const [settings, setSettings] = useState<TVSettings>(readSettings);
+  const [jellyfinUsers, setJellyfinUsers] = useState<JellyfinUser[]>([]);
+  const [jellyfinConnecting, setJellyfinConnecting] = useState(false);
+  const [jellyfinResumeItems, setJellyfinResumeItems] = useState<JellyfinResumeItem[]>([]);
+  const [jellyfinResumeLoading, setJellyfinResumeLoading] = useState(false);
+  const [jellyfinResumeError, setJellyfinResumeError] = useState('');
+  const [jellyfinServerId, setJellyfinServerId] = useState('');
+  const [jellyfinRefreshVersion, setJellyfinRefreshVersion] = useState(0);
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [forecastOpen, setForecastOpen] = useState(false);
@@ -265,6 +273,50 @@ function App() {
   }, [settings.city]);
 
   useEffect(() => { void refreshInstalledApps(); }, [refreshInstalledApps]);
+  
+  // Load the selected user's Continue Watching row. Debouncing avoids repeated API calls
+  // while the server URL or key is being edited in Settings.
+  useEffect(() => {
+    const serverUrl = settings.jellyfinUrl.trim();
+    const apiKey = settings.jellyfinApiKey.trim();
+    const userId = settings.jellyfinUserId.trim();
+
+    if (!serverUrl || !apiKey || !userId) {
+      setJellyfinResumeItems([]);
+      setJellyfinResumeError('');
+      setJellyfinResumeLoading(false);
+      setJellyfinServerId('');
+      return;
+    }
+
+    const controller = new AbortController();
+    let active = true;
+    const debounce = window.setTimeout(() => {
+      setJellyfinResumeLoading(true);
+      setJellyfinResumeError('');
+      void fetchJellyfinResume(serverUrl, apiKey, userId, controller.signal)
+        .then((result) => {
+          if (!active) return;
+          setJellyfinServerId(result.serverId);
+          setJellyfinResumeItems(result.items);
+        })
+        .catch((error: unknown) => {
+          if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
+          setJellyfinResumeError(error instanceof Error ? error.message : 'Could not load Jellyfin Continue Watching.');
+          setJellyfinResumeItems([]);
+        })
+        .finally(() => {
+          if (active) setJellyfinResumeLoading(false);
+        });
+    }, 400);
+
+    return () => {
+      active = false;
+      window.clearTimeout(debounce);
+      controller.abort();
+    };
+  }, [settings.jellyfinUrl, settings.jellyfinApiKey, settings.jellyfinUserId, jellyfinRefreshVersion]);
+
 
   useEffect(() => registerSpatialRemoteKeys(), []);
 
@@ -439,6 +491,50 @@ function App() {
     }, 0);
     return () => window.clearTimeout(focusTimer);
   }, [forecastOpen]);
+
+
+  const connectJellyfin = async () => {
+    if (!settings.jellyfinUrl.trim() || !settings.jellyfinApiKey.trim()) {
+      notify('Enter the Jellyfin server URL and API key first.');
+      return;
+    }
+    setJellyfinConnecting(true);
+    setJellyfinResumeError('');
+    try {
+      const result = await fetchJellyfinUsers(settings.jellyfinUrl, settings.jellyfinApiKey);
+      setJellyfinUsers(result.users);
+      setJellyfinServerId(result.serverId);
+      const selectedExists = result.users.some((user) => user.Id === settings.jellyfinUserId);
+      const selectedUserId = selectedExists
+        ? settings.jellyfinUserId
+        : result.users.length === 1 ? result.users[0].Id : '';
+      if (selectedUserId !== settings.jellyfinUserId) {
+        updateSetting('jellyfinUserId', selectedUserId);
+      }
+      if (selectedUserId) {
+        setJellyfinRefreshVersion((version) => version + 1);
+        notify('Connected to Jellyfin. Continue Watching is loading.');
+      } else {
+        notify('Connected to Jellyfin. Choose the user whose watch progress should be shown.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not connect to Jellyfin.';
+      setJellyfinResumeError(message);
+      notify('Jellyfin connection failed. Check Settings.');
+    } finally {
+      setJellyfinConnecting(false);
+    }
+  };
+
+  const openJellyfinResumeItem = (item: JellyfinResumeItem) => {
+    const url = getJellyfinItemUrl(settings.jellyfinUrl, item.Id, jellyfinServerId);
+    const opened = window.open(url, '_blank');
+    if (opened) {
+      try { opened.opener = null; } catch { /* Some TV WebViews expose a read-only opener. */ }
+      return;
+    }
+    window.location.assign(url);
+  };
 
   const updateSetting = <K extends keyof TVSettings>(key: K, value: TVSettings[K]) => {
     setSettings((previous) => ({ ...previous, [key]: value }));
@@ -959,6 +1055,43 @@ function App() {
             </div>
 
 
+            {settings.jellyfinUrl.trim() && settings.jellyfinApiKey.trim() && (
+              <section className="section-block resume-section" aria-label="Continue watching in Jellyfin">
+                <div className="section-heading">
+                  <div><span className="eyebrow small">JELLYFIN</span><h2>Continue Watching</h2></div>
+                  <TVButton className="text-action" data-tv-focus="true" disabled={jellyfinResumeLoading || !settings.jellyfinUserId} onClick={() => setJellyfinRefreshVersion((version) => version + 1)}>
+                    <RefreshCw size={15} /> Refresh
+                  </TVButton>
+                </div>
+                {jellyfinResumeLoading && <div className="resume-status glass-panel"><LoaderCircle className="spin" size={20} /><span>Loading your unfinished movies and episodes…</span></div>}
+                {!jellyfinResumeLoading && jellyfinResumeError && <div className="resume-status resume-error glass-panel"><Info size={20} /><span>{jellyfinResumeError}</span><TVButton className="secondary-button" data-tv-focus="true" onClick={() => navigateToView('settings')}>Open Settings</TVButton></div>}
+                {!jellyfinResumeLoading && !jellyfinResumeError && !settings.jellyfinUserId && <div className="resume-status glass-panel"><Info size={20} /><span>Connect to Jellyfin in Settings and choose your user to show saved playback progress here.</span><TVButton className="secondary-button" data-tv-focus="true" onClick={() => navigateToView('settings')}>Set up Jellyfin</TVButton></div>}
+                {!jellyfinResumeLoading && !jellyfinResumeError && settings.jellyfinUserId && jellyfinResumeItems.length === 0 && <div className="resume-status glass-panel"><Film size={20} /><span>No unfinished movies or episodes were returned by Jellyfin.</span></div>}
+                {jellyfinResumeItems.length > 0 && (
+                  <CardGrid focusKey="HOME-JELLYFIN-RESUME" className="resume-grid">
+                    {jellyfinResumeItems.map((item) => {
+                      const posterUrl = getJellyfinPosterUrl(settings.jellyfinUrl, settings.jellyfinApiKey, item);
+                      const progress = getJellyfinProgressPercent(item);
+                      const title = item.SeriesName || item.Name;
+                      return (
+                        <TVButton key={item.Id} focusKey={"RESUME-" + item.Id} className="resume-card" data-tv-focus="true" onClick={() => openJellyfinResumeItem(item)} aria-label={"Continue " + title}>
+                          <div className="resume-poster">
+                            {posterUrl ? <img src={posterUrl} loading="lazy" alt="" /> : <Film size={38} />}
+                            <span className="resume-percent">{progress}%</span>
+                          </div>
+                          <div className="resume-copy">
+                            <strong>{title}</strong>
+                            <small>{item.SeriesName && item.Name !== item.SeriesName ? item.Name : item.ProductionYear ? String(item.ProductionYear) : item.Type || 'Video'}</small>
+                            <span className="resume-progress-track"><span style={{ width: progress + '%' }} /></span>
+                          </div>
+                        </TVButton>
+                      );
+                    })}
+                  </CardGrid>
+                )}
+              </section>
+            )}
+
             <section className="section-block featured-section media-catalog" id="media-section">
               <div className="section-heading">
                 <div><span className="eyebrow small">YOUR LIBRARY</span><h2>Your Media</h2></div>
@@ -1037,11 +1170,23 @@ function App() {
                 <label className="check-row"><span><strong>Reduce motion</strong><small>Disables non-essential animations.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.reduceMotion} onChange={(event) => updateSetting('reduceMotion', event.target.checked)} /></label>
                 <label className="check-row"><span><strong>Weather-adaptive scenery</strong><small>Switches between included landscapes based on weather and day/night.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.adaptiveScenery} onChange={(event) => updateSetting('adaptiveScenery', event.target.checked)} /></label>
               </section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="http://192.168.1.10:8096" /></label><label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="http://192.168.1.10:8787" /></label><p className="field-help">SelfMusic now runs inside B1O TV using its authenticated API. Add the exact origin shown on the built-in SelfMusic screen to SELF_MUSIC_ALLOWED_ORIGINS in the SelfMusic server’s private .env file, then restart that server. The player keeps its signed access token in memory and never saves your password. Use the LAN address for local preview or a private HTTPS/Tailscale URL for remote access.</p><TVButton className="selfmusic-open-button" data-tv-focus="true" onClick={() => { void runApp('selfmusic'); }}><Music2 size={16} /> Open built-in player <ArrowRight size={16} /></TVButton></section>
+              <section className="settings-card glass-panel">
+                <div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Connect Jellyfin and your personal music server.</p></div></div>
+                <label className="field-label">Jellyfin server URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="http://192.168.1.10:8096" /></label>
+                <label className="field-label">Jellyfin API key<TVInput data-tv-focus="true" type="password" autoComplete="off" value={settings.jellyfinApiKey} onChange={(event) => updateSetting('jellyfinApiKey', event.target.value)} placeholder="Paste your Jellyfin API key here" /></label>
+                <TVButton className="secondary-button jellyfin-connect-button" data-tv-focus="true" disabled={jellyfinConnecting || !settings.jellyfinUrl.trim() || !settings.jellyfinApiKey.trim()} onClick={() => { void connectJellyfin(); }}><Film size={16} /> {jellyfinConnecting ? "Connecting…" : "Connect to Jellyfin"} <ArrowRight size={15} /></TVButton>
+                {jellyfinUsers.length > 0 && <label className="field-label">Playback history for user<TVSelect data-tv-focus="true" value={settings.jellyfinUserId} onChange={(event) => { updateSetting('jellyfinUserId', event.target.value); setJellyfinRefreshVersion((version) => version + 1); }}><option value="">Choose a user…</option>{jellyfinUsers.map((user) => <option key={user.Id} value={user.Id}>{user.Name}</option>)}</TVSelect></label>}
+                <p className="field-help">Create the key in Jellyfin: Dashboard → Advanced → API Keys. It is stored in this app's local settings. Treat it like a password; exported TV setup files contain it, so keep those files private. You can revoke the key from the same Jellyfin page.</p>
+                {jellyfinResumeError && <p className="field-help resume-settings-error">{jellyfinResumeError}</p>}
+                <div className="settings-divider" />
+                <label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="http://192.168.1.10:8787" /></label>
+                <p className="field-help">SelfMusic uses the built-in sign-in flow and its own API; no separate API key is needed here. Use the LAN address for local playback or a private HTTPS/Tailscale URL for remote access. If your server requires it, add the exact origin shown by the player to SELF_MUSIC_ALLOWED_ORIGINS in the SelfMusic server's private .env file.</p>
+                <TVButton className="selfmusic-open-button" data-tv-focus="true" onClick={() => { void runApp('selfmusic'); }}><Music2 size={16} /> Open built-in player <ArrowRight size={16} /></TVButton>
+              </section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI & Voice</h2><p>Connect your backend endpoint. Keep model API keys on the server.</p></div></div><label className="field-label">AI backend endpoint<TVInput data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Device token<TVInput data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Your Cloudflare Worker token" /></label><p className="field-help">This is the device access token, not the model API key. It stays in local app storage. The endpoint accepts message/history JSON and returns a reply.</p><label className="check-row"><span><strong>Speak replies aloud</strong><small>Requires Speech Synthesis support in this Tizen browser.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><TVButton className="secondary-button test-connection-button" data-tv-focus="true" disabled={aiChecking} onClick={() => { void testAssistantConnection(); }}><Sparkles size={17} /> {aiChecking ? "Checking AI…" : "Check AI Connection"} <ArrowRight size={15} /></TVButton>
                 <TVButton className="secondary-button test-voice-button" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={17} /> Test Voice Assistant <ArrowRight size={15} /></TVButton></section>
             </div>
-            <section className="settings-card glass-panel setup-transfer-card"><div className="settings-card-head"><Download /><div><h2>PC → TV Setup</h2><p>Configure everything here, then transfer your setup to the TV.</p></div></div><div className="setup-transfer-actions"><TVButton className="primary-button" data-tv-focus="true" onClick={exportTVSetup}><Download size={17} /> Export TV Setup</TVButton><TVButton className="secondary-button" data-tv-focus="true" onClick={() => setupImportRef.current?.click()}><Upload size={17} /> Import TV Setup</TVButton><input ref={setupImportRef} className="visually-hidden" type="file" accept="application/json,.json" aria-label="Import a B1O TV setup file" onChange={(event) => importTVSetup(event.target.files?.[0])} /></div><p className="field-help">Export creates b1o-tv-setup.json with your city, wallpaper, service URLs, temperature unit, AI endpoint, and device token. On the TV, open Settings → Import TV Setup and choose the same file. Keep it private because it contains your device token.</p></section>
+            <section className="settings-card glass-panel setup-transfer-card"><div className="settings-card-head"><Download /><div><h2>PC → TV Setup</h2><p>Configure everything here, then transfer your setup to the TV.</p></div></div><div className="setup-transfer-actions"><TVButton className="primary-button" data-tv-focus="true" onClick={exportTVSetup}><Download size={17} /> Export TV Setup</TVButton><TVButton className="secondary-button" data-tv-focus="true" onClick={() => setupImportRef.current?.click()}><Upload size={17} /> Import TV Setup</TVButton><input ref={setupImportRef} className="visually-hidden" type="file" accept="application/json,.json" aria-label="Import a B1O TV setup file" onChange={(event) => importTVSetup(event.target.files?.[0])} /></div><p className="field-help">Export creates b1o-tv-setup.json with your city, wallpaper, service URLs, Jellyfin API key, temperature unit, AI endpoint, and device token. On the TV, open Settings → Import TV Setup and choose the same file. Keep it private because it contains service credentials.</p></section>
           </section>
         )}
       </main>

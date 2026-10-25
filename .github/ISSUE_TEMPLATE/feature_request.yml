@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an improvement for a TV-first media workflow.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What is hard or repetitive when using B1O TV with a remote?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the ideal behavior and the buttons needed to reach it.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: TV model, services, and constraints
+    validations:
+      required: false

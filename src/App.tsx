@@ -572,6 +572,7 @@ function App() {
   const submitAssistant = async (rawText?: string) => {
     const text = (rawText ?? draft).trim();
     if (!text || assistantBusy) return;
+    const english = !/[а-яё]/i.test(text);
     setDraft('');
     setMessages((previous) => [...previous, createAssistantMessage('user', text)].slice(-60));
     setAssistantBusy(true);
@@ -582,18 +583,26 @@ function App() {
       if (intent?.kind === 'remember') {
         const note = saveNote(intent.note);
         setNotesVersion((value) => value + 1);
-        reply = 'Запомнил в заметках этого приложения: «' + note.text + '».';
+        reply = english
+          ? 'Saved a note on this TV: “' + note.text + '”.'
+          : 'Запомнил в заметках этого приложения: «' + note.text + '».';
       } else if (intent?.kind === 'recall') {
         const notes = readSavedNotes();
         reply = notes.length
-          ? 'Вот что сохранено в заметках:\n' + notes.slice(-8).map((note, index) => (index + 1) + '. ' + note.text).join('\n')
-          : 'Пока нет сохранённых заметок. Скажи, например: «Запомни, что…».';
+          ? (english ? 'Here are your saved notes:\n' : 'Вот что сохранено в заметках:\n')
+            + notes.slice(-8).map((note, index) => (index + 1) + '. ' + note.text).join('\n')
+          : english
+            ? 'No saved notes yet. Say “Remember that…” to save one.'
+            : 'Пока нет сохранённых заметок. Скажи, например: «Запомни, что…».';
       } else if (intent?.kind === 'timer') {
         const nextTimer = { endAt: Date.now() + intent.durationMs, label: formatDuration(intent.durationMs) };
         setTimer(nextTimer);
-        reply = 'Таймер запущен на ' + nextTimer.label + '. Пока B1O TV закрыт или выгружен системой, звук/системное уведомление не гарантируются.';
+        reply = english
+          ? 'Timer started for ' + nextTimer.label + '. An alarm is not guaranteed if B1O TV is closed or unloaded by the TV.'
+          : 'Таймер запущен на ' + nextTimer.label + '. Пока B1O TV закрыт или выгружен системой, звук/системное уведомление не гарантируются.';
       } else if (intent?.kind === 'time') {
-        reply = 'Time: ' + new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date()) + '.';
+        const time = new Intl.DateTimeFormat(english ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date());
+        reply = english ? 'Current time: ' + time + '.' : 'Сейчас ' + time + '.';
       } else if (intent?.kind === 'launch') {
         const result = await runApp(intent.target);
         reply = result.message;

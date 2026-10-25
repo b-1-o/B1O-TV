@@ -1,7 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isAllowedServiceUrl, launchTVService } from './tizen';
+import { exitCurrentTVApp, isAllowedServiceUrl, launchTVService } from './tizen';
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe('exitCurrentTVApp', () => {
+  it('requests exit only for the current app', () => {
+    const exit = vi.fn();
+    vi.stubGlobal('window', { tizen: { application: { getCurrentApplication: () => ({ exit }) } } });
+    expect(exitCurrentTVApp()).toBe(true);
+    expect(exit).toHaveBeenCalledOnce();
+  });
+
+  it('returns false when the TV runtime does not expose exit', () => {
+    vi.stubGlobal('window', { tizen: { application: {} } });
+    expect(exitCurrentTVApp()).toBe(false);
+  });
+});
 
 describe('isAllowedServiceUrl', () => {
   it('accepts public HTTPS endpoints', () => {

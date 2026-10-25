@@ -1,136 +1,106 @@
 # B1O TV
 
-**B1O TV** is a personal media dashboard for Samsung Smart TVs running Tizen. It is a regular installable TV application, not a replacement operating system or system-level Home launcher.
+[![CI](https://github.com/b-1-o/B1web/actions/workflows/ci.yml/badge.svg)](https://github.com/b-1-o/B1web/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-white.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/b-1-o/B1web?style=social)](https://github.com/b-1-o/B1web/stargazers)
 
-The goal is a calm, monochrome, translucent-glass home screen for a personal media setup: clock, weather, TV apps, Jellyfin, the built-in SelfMusic player, and a voice/text AI assistant.
+**A remote-first, monochrome media dashboard for Samsung Smart TVs running Tizen.**
+
+B1O TV combines a calm translucent-glass home screen, weather, Jellyfin Continue Watching, an embedded SelfMusic player, and an optional AI assistant. It is a regular TV app, not a replacement for Samsung's system Home screen.
+
+## Why B1O TV?
+
+- **Designed for the TV remote:** visible focus, predictable dock navigation, modal boundaries, and a Back flow that closes the topmost surface first.
+- **Neutral Liquid Glass:** translucent grayscale materials with white focus outlines, rather than opaque blue selection blocks.
+- **Personal media home:** resume unfinished videos from Jellyfin and browse/play music through SelfMusic without leaving the shell.
+- **Optional local-first controls:** notes, timers, clock queries, and supported app launches work inside the TV app; general questions can use a private Cloudflare Worker.
+- **TV-aware lifecycle:** stops its own weather/Jellyfin refresh loops while hidden, pauses embedded SelfMusic playback, and avoids expensive backdrop blur on Tizen.
+- **Privacy-conscious setup:** model API keys stay on the server; personal service credentials are configured on-device.
 
 ## Features
 
-- **TV-first navigation:** directional remote controls, focusable buttons, Enter/Back handling, and a bottom dock.
-- **Neutral Liquid Glass UI:** translucent grayscale surfaces, wallpaper-led atmosphere, and remote focus styling that does not turn selected cards into blue blocks.
-- **Home dashboard:** clock, date, current weather, and a seven-day forecast.
-- **App catalog:** featured services and installed-app discovery/launch where supported by Tizen.
-- **Media:** Jellyfin launch, a Continue Watching rail loaded from the Jellyfin API, and an embedded SelfMusic player.
-- **AI assistant:** text chat through Cloudflare Workers AI, local notes, timers, time queries, and supported app-launch commands.
-- **Voice input:** browser speech recognition or TV microphone recording with the protected Worker transcription endpoint, if the firmware exposes these capabilities.
-- **Personal settings:** wallpapers, city, temperature units, adaptive scenery, reduced motion, server URLs, AI endpoint, and device token.
-- **Setup transfer:** export/import settings as a JSON file.
-- **TV performance path:** avoids expensive live backdrop blur in the Tizen runtime and supports reduced motion.
+- Home screen with clock, weather, forecast, and selectable wallpapers.
+- Installed Tizen app discovery and launch where allowed by the TV firmware.
+- Jellyfin Continue Watching rail with posters and progress.
+- Built-in SelfMusic integration for playlists, favorites, and audio playback.
+- Text/voice AI assistant with local notes, timers, and supported launch intents.
+- TV setup import/export and automatic settings persistence.
+- Reduced-motion support and a simplified low-cost Tizen rendering path.
 
-## Requirements
+## Quick start
 
-- Node.js 20+ and npm.
-- For a real Samsung TV: Tizen Studio, a TV certificate profile, Developer Mode, and a reachable TV on your local network.
-- For AI responses and speech transcription: a deployed Cloudflare Worker with a Workers AI binding and an ASSISTANT_TOKEN secret.
-- For media playback: reachable Jellyfin and/or SelfMusic servers.
-
-## Run locally
+Requirements: Node.js 20+, npm, and (for a real TV) Tizen Studio, Samsung TV Extension, a certificate profile, and Developer Mode.
 
 ```sh
+git clone https://github.com/b-1-o/B1web.git
+cd B1web
 npm install
 npm run dev
 ```
 
-Checks and production build:
+Open `http://localhost:5173` for a browser preview. The preview is useful for UI checks but cannot validate native Samsung APIs or actual remote behavior.
+
+Before installing on a TV, run the full checks:
 
 ```sh
 npm run typecheck
+npm run typecheck:assistant
 npm run lint
 npm test
 npm run build
-npm run preview
 ```
-
-The browser preview is useful for UI checks. Native Tizen app discovery, app launching, and TV microphone behavior must be tested on the actual television.
 
 ## Install on Samsung Tizen
 
-1. Follow the detailed [Russian installation guide](docs/INSTALL-RU.md) for Developer Mode, certificates, device connection, signing, and WGT installation.
-2. Review [TV setup notes](docs/TV-SETUP.md).
-3. Build with `npm run build`.
-4. Package and sign the app in Tizen Studio with your own Samsung TV certificate profile. A production web-build archive is not itself a signed `.wgt`.
-5. Verify remote navigation, Enter/Back, app discovery, weather, media connectivity, and voice behavior on the TV.
+Read the English [installation guide](docs/INSTALL.md) and [TV setup and test guide](docs/TV-SETUP.md). The deployment helper is available as `npm run deploy:tizen -- <TV_IP>:26101`; review `scripts/deploy-tizen-tv.sh` and set your own certificate profile/tools paths. A web-project archive is not a signed `.wgt`. Each user must sign a TV package with their own Samsung certificate.
 
-The helper is available via `npm run deploy:tizen`. Review `scripts/deploy-tizen-tv.sh` first and make sure its device address and certificate setup match your environment.
+## Configure Jellyfin
+
+1. Open Jellyfin Dashboard → **Advanced → API Keys** and create a dedicated key for B1O TV.
+2. In B1O TV, open **Settings → Media Services** and enter the base URL, such as `http://192.168.1.10:8096` for a private LAN server.
+3. Paste the key into **Jellyfin API key**, choose **Connect to Jellyfin**, and select the viewing-history user.
+4. Return Home. The Continue Watching rail will show unfinished videos for the selected user. Selecting an item opens Jellyfin Web details; use Resume/Play there.
+
+For public servers, use HTTPS. HTTP is allowed only for private/local network addresses. API keys are saved in this app's local settings and included in exported setup JSON, so keep exports private and revoke any exposed key from the Jellyfin Dashboard.
 
 ## Configure the AI assistant
 
-The frontend does not contain model-provider API keys. The Worker uses the Cloudflare Workers AI binding.
+The TV frontend contains no model-provider API key. Deploy the Worker and set `ASSISTANT_TOKEN` as a Cloudflare secret:
 
-1. Read [the Worker README](worker/README.md).
-2. Deploy from the repository root:
+```sh
+npx wrangler login
+openssl rand -hex 32
+npx wrangler secret put ASSISTANT_TOKEN --config worker/wrangler.toml
+npx wrangler deploy --config worker/wrangler.toml
+```
 
-   ```sh
-   npx wrangler login
-   npx wrangler deploy --config worker/wrangler.toml
-   ```
+Enter the Worker origin (or `/api/assistant` endpoint) and the same device token in **Settings → AI & Voice**. Press **Check AI Connection** before testing voice. Read [worker/README.md](worker/README.md) for the API contract and security notes.
 
-3. Generate a private device token and set it as a Worker secret:
+## Releases
 
-   ```sh
-   openssl rand -hex 32
-   npx wrangler secret put ASSISTANT_TOKEN --config worker/wrangler.toml
-   ```
+Visit [GitHub Releases](https://github.com/b-1-o/B1web/releases) for packaged builds. Release archives contain the TV web project, not a certificate-signed WGT. Sign the app with your own Samsung TV certificate before installation. To publish a release, open **Actions → Publish Release**, run the workflow with a semantic version such as `0.4.0`, and check the generated release notes and archive.
 
-   Paste the generated value when Wrangler asks for the secret. Never commit or publish it.
+## Performance and platform limits
 
-4. On B1O TV, open **Settings → AI & Voice**, enter the Worker origin (or full `/api/assistant` URL), and paste the same token into **Device token**.
-5. Use **Check AI Connection** to test the authenticated endpoint and get a real model response. This makes a small AI request.
-6. Use **Test Voice Assistant** separately: a working text connection does not guarantee microphone capture or speech synthesis on the TV.
-
-The default model in `worker/wrangler.toml` is `@cf/zai-org/glm-4.7-flash`. The Worker exposes `/health`, `/api/assistant`, and `/api/transcribe`. AI answers may be wrong. The assistant does not remotely change system TV settings; local notes, timers, and supported app launches are handled by the TV app.
-
-## Configure Jellyfin and SelfMusic
-
-Open **Settings → Media Services** and enter the addresses reachable by the TV. For Jellyfin, enter the server URL, create an API key in **Dashboard → Advanced → API Keys**, paste it into the Jellyfin API key field inside B1O TV, then press **Connect to Jellyfin** and choose the user whose viewing progress should be displayed. The Home screen then loads that user's Continue Watching list. Selecting a card opens the item's details page in Jellyfin Web, where you can choose Resume/Play. Never send the API key in chat or commit it to source control.
-
-- Use HTTPS for public endpoints.
-- HTTP is accepted by the app only for local/private network addresses, such as a LAN host or private Tailscale address.
-- A Jellyfin URL can look like `http://192.168.1.10:8096`.
-- For SelfMusic, use the exact server origin displayed in the embedded player. If required by your server's policy, add that origin to `SELF_MUSIC_ALLOWED_ORIGINS` in its private environment file.
-
-Do not expose personal media services to the public internet without appropriate access controls. Keep server credentials private.
+- The manifest disables Tizen background support for B1O TV; the app also pauses its own polling and embedded audio when hidden.
+- Tizen manages the lifecycle of other apps and system services. B1O TV does not attempt to terminate Samsung system apps.
+- B1O TV cannot replace the system Home screen or freely change system TV settings.
+- Timers are not system alarms and cannot guarantee notifications while the app is suspended or closed.
+- Voice recording, app discovery, app launch, and deep links depend on TV model, firmware, privileges, and installed app IDs.
+- A physical-remote pass on the target television remains required even when automated tests pass.
 
 ## Project structure
 
 ```text
 src/
-  App.tsx                    Main TV interface and screen-level behavior
-  components/tv/             Focusable TV controls and SelfMusic panel
-  contexts/                  Theme context
-  platform/                  Tizen APIs and remote-key navigation
-  services/                  Assistant intents, AI client, and weather
-  styles.css                 Responsive UI, glass materials, TV-specific styles
-worker/
-  src/index.ts               Cloudflare AI and transcription API
-  wrangler.toml              Worker and AI model configuration
-docs/
-  INSTALL-RU.md              Russian Samsung TV installation guide
-  TV-SETUP.md                TV API and configuration notes
-  ROADMAP.md                 Implementation roadmap
-scripts/
-  deploy-tizen-tv.sh         Tizen packaging/deployment helper
-  optimize-tv-assets.mjs     Production asset optimization
+  App.tsx                    Screen state and TV-first behavior
+  components/tv/             Focusable controls and SelfMusic player
+  platform/                  Tizen APIs, lifecycle, and remote-key rules
+  services/                  AI assistant, Jellyfin API, and weather
+  styles.css                 Grayscale glass materials and TV runtime styling
+worker/                      Cloudflare Workers AI backend
+docs/                        English installation, setup, and roadmap
+scripts/                     Tizen packaging and asset optimization
 ```
 
-## Known limitations
-
-- **No system launcher replacement:** Tizen applications cannot replace Samsung's system Home screen or freely access every TV setting.
-- **App discovery/launch:** depends on Tizen APIs, app privileges, and installed application IDs.
-- **Microphone:** Samsung firmware may reserve the microphone key or deny recording access. Test voice input on the actual TV.
-- **Timers:** timers work while the app is active; background alarms or notifications are not guaranteed after it closes or is unloaded.
-- **API keys and AI security:** the Jellyfin API key and AI device token are stored in this TV app's local settings. Anyone who extracts either credential may be able to use the associated service. Keep exported setup files private, revoke exposed Jellyfin keys in the Dashboard, rotate exposed AI tokens, and configure Cloudflare rate limits/usage alerts.
-- **Local notes:** stored in this app's local storage, not synced to a cloud database.
-- **YouTube:** B1O TV may launch an installed compatible third-party client; it does not remove ads from the official YouTube app.
-- **Real-TV verification:** a passing browser build does not prove every Tizen API works on every firmware version.
-
-## Release checklist
-
-- [ ] Verify all remote-navigation paths on the target Samsung TV.
-- [ ] Confirm real app IDs for Jellyfin and the preferred YouTube client.
-- [ ] Run **Check AI Connection** using the deployed Worker and device token.
-- [ ] Test voice capture and speech synthesis on the target firmware.
-- [ ] Measure memory and navigation responsiveness during extended use.
-- [ ] Verify Jellyfin/SelfMusic connectivity over LAN and private Tailscale access.
-
-See the [roadmap](docs/ROADMAP.md), [TV setup notes](docs/TV-SETUP.md), and [Worker documentation](worker/README.md).
+See [ROADMAP.md](docs/ROADMAP.md), [TV-SETUP.md](docs/TV-SETUP.md), and [the Worker guide](worker/README.md).

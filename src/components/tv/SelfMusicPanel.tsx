@@ -183,19 +183,20 @@ export function SelfMusicPanel({
     };
   }, []);
 
-  const currentTrack = tracks.find((track) => track.id === currentTrackId) ?? null;
+  const tracksById = useMemo(() => new Map(tracks.map((track) => [track.id, track] as const)), [tracks]);
+  const currentTrack = tracksById.get(currentTrackId) ?? null;
 
   const visibleTracks = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     const sourceTracks = activePlaylistId
-      ? playlistTrackIds.map((id) => tracks.find((track) => track.id === id)).filter((track): track is SelfMusicTrack => Boolean(track))
+      ? playlistTrackIds.map((id) => tracksById.get(id)).filter((track): track is SelfMusicTrack => Boolean(track))
       : tracks;
     return sourceTracks.filter((track) => {
       if (scope === 'favorites' && !favoriteIds.includes(track.id)) return false;
       if (!normalizedQuery) return true;
       return [track.title, track.artist, track.album, track.genre].some((value) => value.toLocaleLowerCase().includes(normalizedQuery));
     });
-  }, [tracks, favoriteIds, query, scope, activePlaylistId, playlistTrackIds]);
+  }, [tracks, tracksById, favoriteIds, query, scope, activePlaylistId, playlistTrackIds]);
 
   const friendlyNetworkError = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : 'Could not connect to SelfMusic.';

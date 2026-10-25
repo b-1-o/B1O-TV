@@ -2786,3 +2786,107 @@ button:disabled { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .exit-confirm-panel, .exit-confirm-actions > button { animation: none !important; transition: none !important; }
 }
+
+
+/* Premium TV motion: keep transitions expressive while limiting work to opacity and transforms. */
+.app-shell.tv-runtime .main-content.transition-enter {
+  animation: tv-screen-enter 190ms cubic-bezier(.2,.8,.2,1) both !important;
+  filter: none !important;
+}
+.app-shell.tv-runtime .main-content.transition-exit {
+  animation: tv-screen-exit 90ms cubic-bezier(.4,0,1,1) both !important;
+  filter: none !important;
+}
+.app-shell.tv-runtime .transition-enter .page-section,
+.app-shell.tv-runtime .transition-enter .home-stage,
+.app-shell.tv-runtime .transition-enter .featured-section,
+.app-shell.tv-runtime .transition-enter .wallpaper-library {
+  animation: tv-content-arrive 190ms cubic-bezier(.2,.8,.2,1) both !important;
+  filter: none !important;
+}
+.app-shell.tv-runtime .transition-enter .settings-card,
+.app-shell.tv-runtime .transition-enter .featured-card,
+.app-shell.tv-runtime .transition-enter .catalog-card,
+.app-shell.tv-runtime .transition-enter .library-card,
+.app-shell.tv-runtime .transition-enter .wallpaper-choice {
+  animation: tv-item-arrive 170ms cubic-bezier(.2,.8,.2,1) both !important;
+  filter: none !important;
+}
+.app-shell.tv-runtime .transition-enter .settings-card:nth-child(2),
+.app-shell.tv-runtime .transition-enter .featured-card:nth-child(2),
+.app-shell.tv-runtime .transition-enter .catalog-card:nth-child(2),
+.app-shell.tv-runtime .transition-enter .wallpaper-choice:nth-child(2) { animation-delay: 24ms !important; }
+.app-shell.tv-runtime .transition-enter .settings-card:nth-child(3),
+.app-shell.tv-runtime .transition-enter .featured-card:nth-child(3),
+.app-shell.tv-runtime .transition-enter .catalog-card:nth-child(3),
+.app-shell.tv-runtime .transition-enter .wallpaper-choice:nth-child(3) { animation-delay: 48ms !important; }
+.app-shell.tv-runtime .transition-enter .settings-card:nth-child(4),
+.app-shell.tv-runtime .transition-enter .featured-card:nth-child(4),
+.app-shell.tv-runtime .transition-enter .catalog-card:nth-child(4),
+.app-shell.tv-runtime .transition-enter .wallpaper-choice:nth-child(4) { animation-delay: 72ms !important; }
+
+@keyframes tv-screen-enter {
+  from { opacity: 0; transform: translate3d(0, 7px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes tv-screen-exit {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: 0; transform: translate3d(0, -4px, 0); }
+}
+@keyframes tv-content-arrive {
+  from { opacity: 0; transform: translate3d(0, 5px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes tv-item-arrive {
+  from { opacity: 0; transform: translate3d(0, 7px, 0) scale(.99); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Keep the liquid-glass material, but never ask the TV WebView to blur live content. */
+.app-shell.tv-runtime,
+.app-shell.tv-runtime *,
+.app-shell.tv-runtime *::before,
+.app-shell.tv-runtime *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.app-shell.tv-runtime .featured-card::before {
+  filter: none !important;
+  background: radial-gradient(ellipse at center, rgba(176,197,226,.10), transparent 72%) !important;
+}
+
+/* A single focused card gets a restrained lift; all other elements stay unpromoted. */
+.app-shell.tv-runtime .featured-card[data-tv-focused="true"],
+.app-shell.tv-runtime .catalog-card[data-tv-focused="true"],
+.app-shell.tv-runtime .library-card[data-tv-focused="true"],
+.app-shell.tv-runtime .resume-card[data-tv-focused="true"],
+.app-shell.tv-runtime .wallpaper-choice[data-tv-focused="true"],
+.app-shell.tv-runtime .home-installed-app[data-tv-focused="true"],
+.app-shell.tv-runtime .selfmusic-track-select[data-tv-focused="true"],
+.app-shell.tv-runtime .dock-item[data-tv-focused="true"] {
+  transform: translate3d(0, -1px, 0) scale(1.012) !important;
+  transition: transform 130ms cubic-bezier(.2,.75,.2,1) !important;
+}
+.app-shell.tv-runtime.reduce-motion .main-content.transition-enter,
+.app-shell.tv-runtime.reduce-motion .main-content.transition-exit,
+.app-shell.tv-runtime.reduce-motion .transition-enter .page-section,
+.app-shell.tv-runtime.reduce-motion .transition-enter .home-stage,
+.app-shell.tv-runtime.reduce-motion .transition-enter .featured-section,
+.app-shell.tv-runtime.reduce-motion .transition-enter .wallpaper-library,
+.app-shell.tv-runtime.reduce-motion .transition-enter .settings-card,
+.app-shell.tv-runtime.reduce-motion .transition-enter .featured-card,
+.app-shell.tv-runtime.reduce-motion .transition-enter .catalog-card,
+.app-shell.tv-runtime.reduce-motion .transition-enter .library-card,
+.app-shell.tv-runtime.reduce-motion .transition-enter .wallpaper-choice,
+.app-shell.tv-runtime.reduce-motion .featured-card[data-tv-focused="true"],
+.app-shell.tv-runtime.reduce-motion .catalog-card[data-tv-focused="true"],
+.app-shell.tv-runtime.reduce-motion .library-card[data-tv-focused="true"],
+.app-shell.tv-runtime.reduce-motion .resume-card[data-tv-focused="true"],
+.app-shell.tv-runtime.reduce-motion .wallpaper-choice[data-tv-focused="true"],
+.app-shell.tv-runtime.reduce-motion .home-installed-app[data-tv-focused="true"],
+.app-shell.tv-runtime.reduce-motion .selfmusic-track-select[data-tv-focused="true"],
+.app-shell.tv-runtime.reduce-motion .dock-item[data-tv-focused="true"] {
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
+}

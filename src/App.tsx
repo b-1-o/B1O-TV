@@ -32,8 +32,11 @@ import { createAssistantMessage, askConfiguredAssistant, formatDuration, parseLo
 import { describeWeather, fetchWeather } from './services/weather';
 import { isAppVisible, subscribeToAppVisibility } from './platform/appLifecycle';
 import { getRemoteDirection, isBackKey, isTizenBackKey, isVoiceKey, resolveVerticalDockTarget } from './platform/remoteNavigation';
+import { getViewMotionTiming } from './platform/performancePolicy';
 import { exitCurrentTVApp, getInstalledApps, isTizenRuntime, launchInstalledAppById, launchTVService, listenSamsungVoiceInteraction, registerSamsungVoiceInteraction, registerSpatialRemoteKeys, registerVoiceRemoteKey } from './platform/tizen';
 import { CardGrid, FocusGroup } from './components/tv/CardGrid';
+import { HomeClock } from './components/tv/HomeClock';
+import { TimerCountdown } from './components/tv/TimerCountdown';
 import { TVButton, TVInput, TVSelect } from './components/tv/FocusableControls';
 import { DEFAULT_CONFIG } from './defaultConfig';
 import { AssistantFeaturedCard, CatalogAppCard, FeaturedAppCard, InstalledAppRow, WallpaperChoiceCard } from './components/tv/MemoizedCards';
@@ -144,6 +147,7 @@ function App() {
   const [jellyfinServerId, setJellyfinServerId] = useState('');
   const [jellyfinRefreshVersion, setJellyfinRefreshVersion] = useState(0);
   const [now, setNow] = useState(() => new Date());
+  const wallpaperHour = now.getHours();
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [forecastOpen, setForecastOpen] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
@@ -175,7 +179,6 @@ function App() {
     createAssistantMessage('assistant', 'I’m B1O Assistant. I can answer questions, remember notes, set timers, and open installed apps. Speak or type in English or Russian.'),
   ]);
   const [timer, setTimer] = useState<ActiveTimer | null>(readTimer);
-  const [remainingMs, setRemainingMs] = useState(0);
   const [notesVersion, setNotesVersion] = useState(0);
   const voiceStartRef = useRef<() => void>(() => undefined);
   const voiceActionAtRef = useRef(0);
@@ -188,18 +191,21 @@ function App() {
     if (nextView === view) return;
     if (viewExitTimer.current !== undefined) window.clearTimeout(viewExitTimer.current);
     if (viewEnterTimer.current !== undefined) window.clearTimeout(viewEnterTimer.current);
-    if (isTizenRuntime()) {
+
+    const motion = getViewMotionTiming(settings.reduceMotion, isTizenRuntime());
+    if (!motion) {
       setView(nextView);
       setViewMotion('');
       return;
     }
+
     setViewMotion('exit');
     viewExitTimer.current = window.setTimeout(() => {
       setView(nextView);
       setViewMotion('enter');
-      viewEnterTimer.current = window.setTimeout(() => setViewMotion(''), 430);
-    }, 170);
-  }, [view]);
+      viewEnterTimer.current = window.setTimeout(() => setViewMotion(''), motion.enterMs);
+    }, motion.exitMs);
+  }, [view, settings.reduceMotion]);
 
   const closeAssistant = useCallback(() => {
     if (assistantCloseTimer.current !== undefined) window.clearTimeout(assistantCloseTimer.current);
@@ -224,12 +230,21 @@ function App() {
 
   useEffect(() => subscribeToAppVisibility(setAppVisible), []);
 
+  // Adaptive scenery only needs a new time value at hour boundaries.
+  // The visible clock updates in its own component so it does not rerender the entire app.
   useEffect(() => {
-    if (!appVisible) return;
-    setNow(new Date());
-    const clock = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(clock);
-  }, [appVisible]);
+    if (!appVisible || !settings.adaptiveScenery) return;
+
+    const current = new Date();
+    setNow(current);
+    const nextHour = new Date(current);
+    nextHour.setHours(current.getHours() + 1, 0, 0, 0);
+    const boundaryTimer = window.setTimeout(
+      () => setNow(new Date()),
+      Math.max(1, nextHour.getTime() - current.getTime()),
+    );
+    return () => window.clearTimeout(boundaryTimer);
+  }, [appVisible, settings.adaptiveScenery, wallpaperHour]);
 
   useEffect(() => {
     if (isTizenRuntime()) {
@@ -373,26 +388,17 @@ function App() {
     } catch {
       // App stays usable if the web runtime restricts storage.
     }
-    if (!timer) {
-      setRemainingMs(0);
-      return;
-    }
-    if (!appVisible) {
-      setRemainingMs(Math.max(0, timer.endAt - Date.now()));
-      return;
-    }
-    const update = () => {
-      const next = timer.endAt - Date.now();
-      if (next <= 0) {
-        setTimer(null);
-        notify('Timer finished: ' + timer.label);
-      } else {
-        setRemainingMs(next);
-      }
-    };
-    update();
-    const interval = window.setInterval(update, 1_000);
-    return () => window.clearInterval(interval);
+  }, [timer]);
+
+  // Use a single deadline timer rather than rerendering the whole dashboard every second.
+  useEffect(() => {
+    if (!timer || !appVisible) return;
+    const delay = Math.max(0, timer.endAt - Date.now());
+    const expiryTimer = window.setTimeout(() => {
+      setTimer((current) => current?.endAt === timer.endAt ? null : current);
+      notify('Timer finished: ' + timer.label);
+    }, delay);
+    return () => window.clearTimeout(expiryTimer);
   }, [timer, notify, appVisible]);
 
   useEffect(() => {
@@ -492,13 +498,20 @@ function App() {
         const main = focused.closest<HTMLElement>('.main-content');
         if (!main) return;
         const currentRect = focused.getBoundingClientRect();
-        hasFocusableBelow = Array.from(main.querySelectorAll<HTMLElement>('[data-tv-focus="true"]')).some((element) => {
-          if (element === focused || ('disabled' in element && Boolean((element as HTMLButtonElement).disabled))) return false;
-          const style = window.getComputedStyle(element);
-          if (style.display === 'none' || style.visibility === 'hidden') return false;
+        const candidates = main.querySelectorAll<HTMLElement>('[data-tv-focus="true"]');
+        for (const element of candidates) {
+          if (element === focused || ('disabled' in element && Boolean((element as HTMLButtonElement).disabled))) continue;
+          // Elements without client rects are hidden, including descendants of display:none containers.
+          // Only inspect computed style after a candidate is found below the focused item.
+          if (element.getClientRects().length === 0) continue;
           const rect = element.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0 && rect.top > currentRect.top + 8;
-        });
+          if (rect.width > 0 && rect.height > 0 && rect.top > currentRect.top + 8) {
+            if (window.getComputedStyle(element).visibility !== 'hidden') {
+              hasFocusableBelow = true;
+              break;
+            }
+          }
+        }
       }
 
       const rememberedKey = lastContentFocusKeyRef.current;
@@ -1044,9 +1057,6 @@ function App() {
   const activeWallpaper = settings.adaptiveScenery
     ? getAdaptiveWallpaper(weather, now)
     : WALLPAPERS.find((wallpaper) => wallpaper.id === settings.wallpaper) ?? WALLPAPERS[0];
-  const displayedClock = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' }).format(now);
-  const displayedDate = new Intl.DateTimeFormat('en-US', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
-
   return (
     <FocusContext.Provider value={spatialRootFocusKey}>
     <div ref={spatialRootRef as import('react').Ref<HTMLDivElement>} className={shellClass} style={{
@@ -1066,7 +1076,7 @@ function App() {
           <TVButton className="island-main island-timer-main" data-tv-focus="true" onClick={() => setTimer(null)} aria-label="Cancel timer">
             <span className="island-orb timer-orb"><Timer size={18} /></span>
             <span className="island-copy"><strong>Timer</strong><small>{timer.label}</small></span>
-            <span className="island-countdown">{formatDuration(remainingMs)}</span>
+            <span className="island-countdown"><TimerCountdown endAt={timer.endAt} /></span>
           </TVButton>
         ) : (
           <TVButton className="island-main island-music-main" data-tv-focus="true" onClick={() => navigateToView('selfmusic')} aria-label="Return to SelfMusic player">
@@ -1076,7 +1086,7 @@ function App() {
           </TVButton>
         )}
 
-        {timer && (voiceListening || assistantBusy || assistantActivityText) && <span className="island-secondary"><Timer size={14} /><strong>{formatDuration(remainingMs)}</strong></span>}
+        {timer && (voiceListening || assistantBusy || assistantActivityText) && <span className="island-secondary"><Timer size={14} /><strong><TimerCountdown endAt={timer.endAt} /></strong></span>}
         {musicActivity && (voiceListening || assistantBusy || assistantActivityText || timer) && (
           <TVButton className="island-activity-button" data-tv-focus="true" onClick={() => navigateToView('selfmusic')} aria-label="Return to SelfMusic player"><Music2 size={15} /></TVButton>
         )}
@@ -1096,10 +1106,7 @@ function App() {
           <>
             <div className="home-stage">
               <section className="hero-section" aria-label="Home screen">
-                <div className="home-clock-column">
-                  <div className="clock" aria-label={'Time: ' + displayedClock}>{displayedClock}</div>
-                  <div className="date-line">{displayedDate}</div>
-                </div>
+                <HomeClock />
 
                 <TVButton focusKey="WEATHER-FORECAST" className="weather-panel glass-panel" data-tv-focus="true" aria-label="Open seven-day weather forecast" onClick={() => setForecastOpen(true)}>
                   <div className="weather-icon" aria-hidden="true">{weather ? <WeatherIcon code={weather.code} isDay={weather.isDay} /> : <Cloud />}</div>

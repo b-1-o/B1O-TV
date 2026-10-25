@@ -10,7 +10,7 @@ The goal is a calm, monochrome, translucent-glass home screen for a personal med
 - **Neutral Liquid Glass UI:** translucent grayscale surfaces, wallpaper-led atmosphere, and remote focus styling that does not turn selected cards into blue blocks.
 - **Home dashboard:** clock, date, current weather, and a seven-day forecast.
 - **App catalog:** featured services and installed-app discovery/launch where supported by Tizen.
-- **Media:** Jellyfin launch and an embedded SelfMusic player.
+- **Media:** Jellyfin launch, a Continue Watching rail loaded from the Jellyfin API, and an embedded SelfMusic player.
 - **AI assistant:** text chat through Cloudflare Workers AI, local notes, timers, time queries, and supported app-launch commands.
 - **Voice input:** browser speech recognition or TV microphone recording with the protected Worker transcription endpoint, if the firmware exposes these capabilities.
 - **Personal settings:** wallpapers, city, temperature units, adaptive scenery, reduced motion, server URLs, AI endpoint, and device token.
@@ -82,7 +82,7 @@ The default model in `worker/wrangler.toml` is `@cf/zai-org/glm-4.7-flash`. The 
 
 ## Configure Jellyfin and SelfMusic
 
-Open **Settings → Media Services** and enter the addresses reachable by the TV.
+Open **Settings → Media Services** and enter the addresses reachable by the TV. For Jellyfin, enter the server URL, create an API key in **Dashboard → Advanced → API Keys**, paste it into the Jellyfin API key field inside B1O TV, then press **Connect to Jellyfin** and choose the user whose viewing progress should be displayed. The Home screen then loads that user's Continue Watching list. Selecting a card opens the item's details page in Jellyfin Web, where you can choose Resume/Play. Never send the API key in chat or commit it to source control.
 
 - Use HTTPS for public endpoints.
 - HTTP is accepted by the app only for local/private network addresses, such as a LAN host or private Tailscale address.
@@ -119,7 +119,7 @@ scripts/
 - **App discovery/launch:** depends on Tizen APIs, app privileges, and installed application IDs.
 - **Microphone:** Samsung firmware may reserve the microphone key or deny recording access. Test voice input on the actual TV.
 - **Timers:** timers work while the app is active; background alarms or notifications are not guaranteed after it closes or is unloaded.
-- **AI security:** the device token is stored in the TV app's local settings. Anyone who extracts it may be able to call the Worker. Rotate an exposed token and configure Cloudflare rate limits/usage alerts.
+- **API keys and AI security:** the Jellyfin API key and AI device token are stored in this TV app's local settings. Anyone who extracts either credential may be able to use the associated service. Keep exported setup files private, revoke exposed Jellyfin keys in the Dashboard, rotate exposed AI tokens, and configure Cloudflare rate limits/usage alerts.
 - **Local notes:** stored in this app's local storage, not synced to a cloud database.
 - **YouTube:** B1O TV may launch an installed compatible third-party client; it does not remove ads from the official YouTube app.
 - **Real-TV verification:** a passing browser build does not prove every Tizen API works on every firmware version.

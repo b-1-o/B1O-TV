@@ -46,7 +46,9 @@ describe('Jellyfin URL helpers', () => {
 
 describe('Jellyfin API requests', () => {
   it('loads the available users and server ID using the API key', async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+    const requestHeaders: Array<Record<string, string> | undefined> = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      requestHeaders.push(init?.headers as Record<string, string> | undefined);
       const url = String(input);
       if (url.endsWith('/Users')) {
         return new Response(JSON.stringify([{ Id: 'user-1', Name: 'Erik' }]), { status: 200 });
@@ -59,7 +61,7 @@ describe('Jellyfin API requests', () => {
     expect(result.users).toEqual([{ Id: 'user-1', Name: 'Erik' }]);
     expect(result.serverId).toBe('server-1');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls.every((call) => (call[1]?.headers as Record<string, string>)['X-Emby-Token'] === 'test-key')).toBe(true);
+    expect(requestHeaders.every((headers) => headers?.['X-Emby-Token'] === 'test-key')).toBe(true);
   });
 
   it('loads the resume row for the selected user', async () => {

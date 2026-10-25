@@ -166,6 +166,23 @@ export function SelfMusicPanel({
   const [favoriteBusyId, setFavoriteBusyId] = useState('');
   const [artworkFailed, setArtworkFailed] = useState(false);
 
+
+  
+  useEffect(() => {
+    const pauseWhenHidden = () => {
+      if (!document.hidden) return;
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      setIsBuffering(false);
+    };
+    document.addEventListener('visibilitychange', pauseWhenHidden);
+    window.addEventListener('pagehide', pauseWhenHidden);
+    return () => {
+      document.removeEventListener('visibilitychange', pauseWhenHidden);
+      window.removeEventListener('pagehide', pauseWhenHidden);
+    };
+  }, []);
+
   const currentTrack = tracks.find((track) => track.id === currentTrackId) ?? null;
 
   const visibleTracks = useMemo(() => {

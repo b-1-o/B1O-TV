@@ -27,6 +27,39 @@ describe('parseLocalIntent', () => {
     expect(parseLocalIntent('Открой Jellyfin')).toEqual({ kind: 'launch', target: 'jellyfin' });
   });
 
+  it('parses an English reminder into a local note command', () => {
+    expect(parseLocalIntent('Remember that I prefer a monochrome interface')).toEqual({
+      kind: 'remember',
+      note: 'I prefer a monochrome interface',
+    });
+  });
+
+  it('recalls notes in English', () => {
+    expect(parseLocalIntent('Show my notes')).toEqual({ kind: 'recall' });
+  });
+
+  it('parses a timer requested in English', () => {
+    expect(parseLocalIntent('Set a timer for 5 minutes')).toEqual({
+      kind: 'timer',
+      durationMs: 300_000,
+    });
+  });
+
+  it('parses an amount-first English timer phrase', () => {
+    expect(parseLocalIntent('30 seconds timer')).toEqual({
+      kind: 'timer',
+      durationMs: 30_000,
+    });
+  });
+
+  it('recognizes a current-time question in English', () => {
+    expect(parseLocalIntent('What time is it?')).toEqual({ kind: 'time' });
+  });
+
+  it('recognizes an English movie-launch request', () => {
+    expect(parseLocalIntent('Open movies in Jellyfin')).toEqual({ kind: 'launch', target: 'jellyfin' });
+  });
+
   it('does not turn an ordinary question into an action', () => {
     expect(parseLocalIntent('Почему небо серое?')).toBeNull();
   });

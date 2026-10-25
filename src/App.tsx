@@ -152,6 +152,7 @@ function App() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantClosing, setAssistantClosing] = useState(false);
   const [assistantBusy, setAssistantBusy] = useState(false);
+  const [aiChecking, setAiChecking] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [assistantActivityText, setAssistantActivityText] = useState('');
   const [islandMounted, setIslandMounted] = useState(false);
@@ -448,6 +449,26 @@ function App() {
     setAssistantOpen(true);
     window.setTimeout(() => document.querySelector<HTMLInputElement>('[data-assistant-input]')?.focus(), 60);
   }, []);
+  const testAssistantConnection = async () => {
+    if (!settings.aiToken.trim()) {
+      notify('Add the Device token in Settings → AI & Voice first.');
+      return;
+    }
+    setAiChecking(true);
+    try {
+      await askConfiguredAssistant(
+        settings.aiEndpoint,
+        'Reply with exactly: B1O TV AI connection OK.',
+        [],
+        settings.aiToken,
+      );
+      notify('AI backend is reachable and returned a response.');
+    } catch (error) {
+      notify('AI connection failed: ' + (error instanceof Error ? error.message : 'Unknown error.'));
+    } finally {
+      setAiChecking(false);
+    }
+  };
 
   const startVoiceAssistant = () => {
     if (assistantCloseTimer.current !== undefined) window.clearTimeout(assistantCloseTimer.current);
@@ -1008,7 +1029,8 @@ function App() {
                 <label className="check-row"><span><strong>Weather-adaptive scenery</strong><small>Switches between included landscapes based on weather and day/night.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.adaptiveScenery} onChange={(event) => updateSetting('adaptiveScenery', event.target.checked)} /></label>
               </section>
               <section className="settings-card glass-panel"><div className="settings-card-head"><Film /><div><h2>Media Services</h2><p>Your personal media server URLs.</p></div></div><label className="field-label">Jellyfin URL<TVInput data-tv-focus="true" type="url" value={settings.jellyfinUrl} onChange={(event) => updateSetting('jellyfinUrl', event.target.value)} placeholder="http://192.168.1.10:8096" /></label><label className="field-label">SelfMusic URL<TVInput data-tv-focus="true" type="url" value={settings.selfMusicUrl} onChange={(event) => updateSetting('selfMusicUrl', event.target.value)} placeholder="http://192.168.1.10:8787" /></label><p className="field-help">SelfMusic now runs inside B1O TV using its authenticated API. Add the exact origin shown on the built-in SelfMusic screen to SELF_MUSIC_ALLOWED_ORIGINS in the SelfMusic server’s private .env file, then restart that server. The player keeps its signed access token in memory and never saves your password. Use the LAN address for local preview or a private HTTPS/Tailscale URL for remote access.</p><TVButton className="selfmusic-open-button" data-tv-focus="true" onClick={() => { void runApp('selfmusic'); }}><Music2 size={16} /> Open built-in player <ArrowRight size={16} /></TVButton></section>
-              <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI & Voice</h2><p>Connect your backend endpoint. Keep model API keys on the server.</p></div></div><label className="field-label">AI backend endpoint<TVInput data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Device token<TVInput data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Your Cloudflare Worker token" /></label><p className="field-help">This is the device access token, not the model API key. It stays in local app storage. The endpoint accepts message/history JSON and returns a reply.</p><label className="check-row"><span><strong>Speak replies aloud</strong><small>Requires Speech Synthesis support in this Tizen browser.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><TVButton className="secondary-button test-voice-button" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={17} /> Test Voice Assistant <ArrowRight size={15} /></TVButton></section>
+              <section className="settings-card glass-panel"><div className="settings-card-head"><Mic /><div><h2>AI & Voice</h2><p>Connect your backend endpoint. Keep model API keys on the server.</p></div></div><label className="field-label">AI backend endpoint<TVInput data-tv-focus="true" type="url" value={settings.aiEndpoint} onChange={(event) => updateSetting('aiEndpoint', event.target.value)} placeholder="https://your-worker.example.com/api/assistant" /></label><label className="field-label">Device token<TVInput data-tv-focus="true" type="password" autoComplete="off" value={settings.aiToken} onChange={(event) => updateSetting('aiToken', event.target.value)} placeholder="Your Cloudflare Worker token" /></label><p className="field-help">This is the device access token, not the model API key. It stays in local app storage. The endpoint accepts message/history JSON and returns a reply.</p><label className="check-row"><span><strong>Speak replies aloud</strong><small>Requires Speech Synthesis support in this Tizen browser.</small></span><TVInput data-tv-focus="true" type="checkbox" checked={settings.speakReplies} onChange={(event) => updateSetting('speakReplies', event.target.checked)} /></label><TVButton className="secondary-button test-connection-button" data-tv-focus="true" disabled={aiChecking} onClick={() => { void testAssistantConnection(); }}><Sparkles size={17} /> {aiChecking ? "Checking AI…" : "Check AI Connection"} <ArrowRight size={15} /></TVButton>
+                <TVButton className="secondary-button test-voice-button" data-tv-focus="true" onClick={startVoiceAssistant}><Mic size={17} /> Test Voice Assistant <ArrowRight size={15} /></TVButton></section>
             </div>
             <section className="settings-card glass-panel setup-transfer-card"><div className="settings-card-head"><Download /><div><h2>PC → TV Setup</h2><p>Configure everything here, then transfer your setup to the TV.</p></div></div><div className="setup-transfer-actions"><TVButton className="primary-button" data-tv-focus="true" onClick={exportTVSetup}><Download size={17} /> Export TV Setup</TVButton><TVButton className="secondary-button" data-tv-focus="true" onClick={() => setupImportRef.current?.click()}><Upload size={17} /> Import TV Setup</TVButton><input ref={setupImportRef} className="visually-hidden" type="file" accept="application/json,.json" aria-label="Import a B1O TV setup file" onChange={(event) => importTVSetup(event.target.files?.[0])} /></div><p className="field-help">Export creates b1o-tv-setup.json with your city, wallpaper, service URLs, temperature unit, AI endpoint, and device token. On the TV, open Settings → Import TV Setup and choose the same file. Keep it private because it contains your device token.</p></section>
           </section>

@@ -51,7 +51,16 @@ jobs:
           pkg.version = version;
           fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           const manifestPath = 'public/config.xml';
-          const manifest = fs.readFileSync(manifestPath, 'utf8').replace(/version="[^"]+"/, 'version="' + version + '"');
+          const rawManifest = fs.readFileSync(manifestPath, 'utf8');
+          // Match the app version on the <widget> element, not the XML declaration's version="1.0".
+          const widgetVersion = /(<widget\\b[^>]*\\bversion=")[^"]+(\")/;
+          if (!widgetVersion.test(rawManifest)) {
+            throw new Error('Could not find the widget version attribute in public/config.xml');
+          }
+          const manifest = rawManifest.replace(widgetVersion, (_match, before, after) => before + version + after);
+          if (!manifest.startsWith('<?xml version="1.0"')) {
+            throw new Error('Refusing to build a package with an invalid XML declaration');
+          }
           fs.writeFileSync(manifestPath, manifest);
           NODE
       - run: npm install --no-audit --no-fund

@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible B1O TV issue.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: input
+    id: tv-model
+    attributes:
+      label: TV model and Tizen version
+      placeholder: "Samsung Q60D, Tizen version..."
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: B1O TV version or commit
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Remote navigation
+        - Performance or lifecycle
+        - Jellyfin
+        - SelfMusic
+        - AI or voice
+        - Installation
+        - Visual design
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the exact remote buttons or screen sequence.
+      placeholder: "1. Open Home..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Remove API keys, tokens, server credentials, and private addresses before posting.
+    validations:
+      required: false

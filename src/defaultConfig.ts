@@ -14,6 +14,8 @@ export const DEFAULT_CONFIG: TVSettings = {
   aiEndpoint: 'https://b1o-tv-assistant.collab-docs-b1o.workers.dev',
   aiToken: '',
   jellyfinUrl: '',
+  jellyfinApiKey: '',
+  jellyfinUserId: '',
   selfMusicUrl: '',
   speakReplies: false,
   wallpaper: 'wallhaven',

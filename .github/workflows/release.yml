@@ -63,26 +63,35 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick zip
-      - run: npm run build
-      - name: Assemble the unsigned TV web project
+      - name: Build and package the unsigned WGT
+        env:
+          RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm run package:tizen-web -- --output "release-tizen/B1O-TV-v${RELEASE_VERSION}-unsigned.wgt"
+          test -s "release-tizen/B1O-TV-v${RELEASE_VERSION}-unsigned.wgt"
+      - name: Assemble the AI-ready TV installer kit
         env:
           RELEASE_VERSION: ${{ steps.meta.outputs.version }}
         run: |
           set -euo pipefail
           PACKAGE_DIR="B1O-TV-v${RELEASE_VERSION}"
           ARCHIVE="${PACKAGE_DIR}.zip"
-          mkdir -p "$PACKAGE_DIR/docs"
-          cp -R dist/. "$PACKAGE_DIR/"
-          cp README.md LICENSE CHANGELOG.md "$PACKAGE_DIR/"
-          cp docs/INSTALL.md docs/TV-SETUP.md docs/ROADMAP.md "$PACKAGE_DIR/docs/"
-          cat > "$PACKAGE_DIR/INSTALL-NOTES.txt" <<'EOF'
-          This archive contains the B1O TV web project, not a signed WGT.
-          Sign the application with your own Samsung TV certificate in Tizen Studio.
-          Never share your certificate, signing password, device token, or exported setup JSON.
-          Full English instructions are in docs/INSTALL.md.
+          WGT="release-tizen/B1O-TV-v${RELEASE_VERSION}-unsigned.wgt"
+          mkdir -p "${PACKAGE_DIR}/docs"
+          cp -R dist/. "${PACKAGE_DIR}/"
+          cp "$WGT" "${PACKAGE_DIR}/B1O-TV-unsigned.wgt"
+          cp README.md LICENSE CHANGELOG.md PROMPT.md AGENTS.md "${PACKAGE_DIR}/"
+          cp docs/INSTALL.md docs/AI-INSTALL.md docs/TV-SETUP.md docs/PERFORMANCE.md docs/ROADMAP.md "${PACKAGE_DIR}/docs/"
+          cat > "${PACKAGE_DIR}/INSTALL-NOTES.txt" <<'EOF'
+          Open PROMPT.md in an AI coding agent with terminal access and follow docs/AI-INSTALL.md.
+          B1O-TV-unsigned.wgt is an unsigned package. Import it into Apps2Samsung to sign/install it, or use Tizen Studio with your own certificate.
+          Do not install the unsigned WGT directly with SDB. Never share certificates, signing passwords, device tokens, API keys, or exported setup JSON.
+          Developer Mode and Samsung account/certificate prompts must be approved by the TV owner.
           EOF
           zip -qr "$ARCHIVE" "$PACKAGE_DIR"
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+          echo "WGT=$WGT" >> "$GITHUB_ENV"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -94,7 +103,11 @@ jobs:
           body: |
             B1O TV v${{ steps.meta.outputs.version }}.
 
-            The attached archive is the unsigned TV web project. Sign it with your own Samsung TV certificate in Tizen Studio before installation.
+            The ZIP is an AI-ready installer kit: open PROMPT.md in an AI agent with terminal access. It includes B1O TV's unsigned WGT and English setup guides.
 
-            See CHANGELOG.md and the included English installation guide for setup instructions.
-          files: ${{ env.ARCHIVE }}
+            Import the WGT into Apps2Samsung so it can sign/install it, or use Tizen Studio with your own Samsung TV certificate. Do not install the unsigned WGT directly with SDB. TizenTube is installed separately through Apps2Samsung if it is missing. TV-side Developer Mode and Samsung account/certificate prompts still require owner approval.
+
+            See docs/AI-INSTALL.md for the complete workflow and safety boundaries.
+          files: |
+            ${{ env.ARCHIVE }}
+            ${{ env.WGT }}

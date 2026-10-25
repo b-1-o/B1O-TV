@@ -18,7 +18,10 @@ jobs:
       - name: Validate Tizen scripts and manifest
         run: |
           bash -n scripts/deploy-tizen-tv.sh
+          bash -n scripts/tv-doctor.sh
           node --check scripts/optimize-tv-assets.mjs
+          node --check scripts/package-tizen-tv.mjs
+          python3 -m py_compile scripts/package-tizen-tv.py
           python3 -c 'import xml.etree.ElementTree as ET; ET.parse("public/config.xml")'
       - uses: actions/setup-node@v4
         with:
@@ -32,21 +35,24 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
-      - run: npm run build
-      - name: Verify Samsung TV launcher icon
-        run: test -s dist/icon.png
-      - name: Assemble TV-ready web project
+      - run: npm run package:tizen-web
+      - name: Verify Samsung TV launcher icon and unsigned WGT
         run: |
-          mkdir -p tv-package
+          test -s dist/icon.png
+          test -s release-tizen/B1O-TV-unsigned.wgt
+      - name: Assemble TV project and AI installation kit
+        run: |
+          set -euo pipefail
+          mkdir -p tv-package/docs
           cp -R dist/. tv-package/
-          cp docs/INSTALL.md tv-package/INSTALL.md
-          cp docs/TV-SETUP.md tv-package/TV-SETUP-REFERENCE.md
-          cat > tv-package/SETUP-TRANSFER.txt <<'EOF'
-          Configure B1O TV in the PC browser, then use Settings > Export TV Setup.
-          On the TV, open Settings > Import TV Setup and select the exported JSON file. Do not share the file or commit it to Git.
-          The JSON includes the device token. Keep it private and delete it after import.
-          This package contains the web project files, not a signed WGT.
-          To install a WGT, open the files in Samsung Tizen Studio and sign with your own TV certificate.
+          cp release-tizen/B1O-TV-unsigned.wgt tv-package/
+          cp README.md LICENSE CHANGELOG.md PROMPT.md AGENTS.md tv-package/
+          cp docs/INSTALL.md docs/AI-INSTALL.md docs/TV-SETUP.md docs/PERFORMANCE.md docs/ROADMAP.md tv-package/docs/
+          cat > tv-package/INSTALL-NOTES.txt <<'EOF'
+          Open PROMPT.md in an AI coding agent with terminal access and follow docs/AI-INSTALL.md.
+          B1O-TV-unsigned.wgt is an unsigned package. Import it into Apps2Samsung or sign locally with your Tizen Studio certificate.
+          Do not install the unsigned WGT directly with SDB. Never share certificates, signing passwords, device tokens, API keys, or exported setup JSON.
+          TV-side Developer Mode and Samsung account/certificate prompts must be approved by the TV owner.
           EOF
       - name: Upload TV-ready project
         uses: actions/upload-artifact@v4

@@ -1,7 +1,7 @@
 {
   "name": "b1o-tv",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -35,5 +35,28 @@
     "vite": "^6.0.7",
     "wrangler": "^4.40.0",
     "vitest": "^2.1.8"
-  }
+  },
+  "description": "Remote-first monochrome media dashboard for Samsung Tizen TVs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/b-1-o/B1web.git"
+  },
+  "homepage": "https://github.com/b-1-o/B1web#readme",
+  "bugs": {
+    "url": "https://github.com/b-1-o/B1web/issues"
+  },
+  "keywords": [
+    "samsung-smart-tv",
+    "tizen",
+    "smart-tv",
+    "media-dashboard",
+    "jellyfin",
+    "selfmusic",
+    "self-hosted",
+    "react",
+    "typescript",
+    "remote-control",
+    "cloudflare-workers"
+  ]
 }

@@ -2645,3 +2645,86 @@ button:disabled { transform: none; }
   .app-shell.tv-runtime [data-tv-focused="true"],
   .app-shell.tv-runtime .tv-focusable--focused { transform: none !important; }
 }
+
+/* Continue Watching: cinematic poster rail for the remote-driven home screen. */
+.resume-section { margin-top: 28px; }
+.resume-section .section-heading { margin-bottom: 16px; }
+.resume-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(12px, 1.35vw, 22px);
+}
+.resume-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 20px;
+  color: #f6f6f6;
+  text-align: left;
+  background: linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.015)), rgba(8,8,8,.35);
+  box-shadow: 0 14px 36px rgba(0,0,0,.2);
+  transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.resume-card:hover { border-color: rgba(255,255,255,.34); transform: translateY(-2px); }
+.resume-poster {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  color: rgba(255,255,255,.72);
+  background:
+    radial-gradient(ellipse at 40% 20%, rgba(255,255,255,.1), transparent 60%),
+    linear-gradient(145deg, #1c1c1c, #070707);
+}
+.resume-poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.resume-percent {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  padding: 5px 7px;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 9px;
+  color: #fff;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0,0,0,.58);
+}
+.resume-copy { display: grid; gap: 8px; min-width: 0; padding: 13px 14px 15px; }
+.resume-copy strong { overflow: hidden; color: #f6f6f6; font-size: clamp(12px, 1.05vw, 15px); font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
+.resume-copy small { overflow: hidden; color: rgba(255,255,255,.65); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.resume-progress-track { display: block; height: 3px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.12); }
+.resume-progress-track > span { display: block; height: 100%; border-radius: inherit; background: rgba(255,255,255,.84); }
+.resume-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 16px 20px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 17px;
+  color: rgba(255,255,255,.75);
+  background: rgba(255,255,255,.035);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.resume-status > span { flex: 1; }
+.resume-error { border-color: rgba(255,255,255,.25); }
+.resume-settings-error { color: #f2dddd !important; }
+.settings-divider { height: 1px; margin: 16px 0; background: rgba(255,255,255,.12); }
+@media (max-width: 1280px) {
+  .resume-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .resume-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .resume-copy { padding: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .resume-card { transition: none !important; }
+}
